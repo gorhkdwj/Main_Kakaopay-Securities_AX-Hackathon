@@ -1,0 +1,11 @@
+# Local conversation logs
+logs/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local secrets
+.env
+.env.*
+!.env.example
