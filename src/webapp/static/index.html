@@ -30,7 +30,7 @@
     <button class="pg" data-goto="5" title="검토 의향">⑤</button>
     <button class="pg" data-goto="6" title="모의 주문">⑥</button>
     <button class="pg" data-goto="7" title="회고">⑦</button>
-    <button class="pg" data-goto="8" title="안전모드">⑧</button>
+    <button class="pg" data-goto="8" title="주문 화면(재현)">⑧</button>
     <span id="progress-label" aria-live="polite"></span>
   </nav>
 
@@ -171,22 +171,29 @@
     <div id="s7-saved"></div>
   </section>
 
-  <!-- ⑧ 장애 안전모드 -->
-  <section id="step-8" class="step-panel" data-step="8" aria-label="8단계 — 장애 안전모드">
-    <span class="step-chip">⑧ 안전모드</span>
-    <div class="alert-band">일시적 접속 지연이 감지된 상황이에요(데모) — 안전모드로 전환됐어요</div>
-    <h2>지금은 이것만 보여드릴게요</h2>
-    <div id="s8-order-state"></div>
-    <div class="kcard">
-      <div class="tag fact">공지</div>
-      일부 접속 지연이 확인됐어요(데모 상황). 복구 시점은 확인되는 대로 공지돼요 — 미리 단정해 말하지 않아요.
+  <!-- ⑧ 주문 화면(실앱 재현 — 비기능·시연용, 계약 §9 재현 화면 규칙) -->
+  <section id="step-8" class="step-panel" data-step="8" aria-label="8단계 — 주문 화면(실앱 재현·비기능)">
+    <span class="step-chip">⑧ 주문 화면(재현)</span>
+    <div class="alert-band">실앱 주문 화면 재현(시연용) — 버튼은 동작하지 않아요</div>
+    <div id="s8-header"></div>
+    <div class="kcard notice">
+      <div class="tag interp">판단 전 브리핑</div>
+      주문 전에 확인된 사실과 선택지를 정리해 드려요.
+      <button id="s8-briefing-entry" class="btn dark" type="button">판단 전 브리핑 열기</button>
     </div>
-    <div class="kcard">
-      <div class="tag unk">비상 절차</div>
-      안전모드에서는 새 주문을 권하지 않아요 — 신규 주문 유도 화면은 전부 숨겨져요.
-      급한 주문이 필요하면 <b>고객센터·ARS(데모 안내)</b>를 이용하고, 필요한 화면은 캡처로 남겨 두세요.
+    <div class="order-tabs" role="group" aria-label="구매·판매 탭(재현 — 동작 없음)">
+      <button id="s8-tab-buy" class="order-tab" type="button" disabled>구매</button>
+      <button id="s8-tab-sell" class="order-tab" type="button" disabled>판매</button>
     </div>
-    <button id="btn-safe-exit" class="btn ghost" type="button">안전모드 해제하고 돌아가기</button>
+    <div id="s8-handoff"></div>
+    <div class="kcard" aria-label="주문 입력(재현 — 동작 없음)">
+      <div class="sheet-row"><span>주문 유형</span><span>지정가</span></div>
+      <div class="sheet-row"><span>가격</span><span id="s8-price">—</span></div>
+      <div class="sheet-row"><span>수량</span><span id="s8-qty">—</span></div>
+    </div>
+    <button id="s8-order-buy" class="btn order-fake side-buy" type="button" disabled>구매하기</button>
+    <button id="s8-order-sell" class="btn order-fake side-sell" type="button" disabled>판매하기</button>
+    <p class="footnote">이 화면은 실제 앱의 주문 화면을 본뜬 재현이에요 — 이 데모에서 주문은 실행되지 않아요.</p>
   </section>
 
   <!-- 위저드 내비게이션(취소·돌아가기 = 진행과 동일 위계) -->
@@ -195,6 +202,23 @@
     <button id="btn-next" class="btn nav" type="button">다음 단계 →</button>
   </div>
 </main>
+
+<!-- 장애 안전모드 — DEMO 패널 토글로 어느 화면 위에서든 전환되는 보기 방식(계약 §8) -->
+<section id="safemode-screen" aria-label="장애 안전모드">
+  <div class="alert-band">일시적 접속 지연이 감지된 상황이에요(데모) — 안전모드로 전환됐어요</div>
+  <h2>지금은 이것만 보여드릴게요</h2>
+  <div id="safe-order-state"></div>
+  <div class="kcard">
+    <div class="tag fact">공지</div>
+    일부 접속 지연이 확인됐어요(데모 상황). 복구 시점은 확인되는 대로 공지돼요 — 미리 단정해 말하지 않아요.
+  </div>
+  <div class="kcard">
+    <div class="tag unk">비상 절차</div>
+    안전모드에서는 새 주문을 권하지 않아요 — 신규 주문 유도 화면은 전부 숨겨져요.
+    급한 주문이 필요하면 <b>고객센터·ARS(데모 안내)</b>를 이용하고, 필요한 화면은 캡처로 남겨 두세요.
+  </div>
+  <button id="btn-safe-exit" class="btn ghost" type="button">안전모드 해제하고 돌아가기</button>
+</section>
 
 <!-- 접이식 DEMO 패널(우측 하단) -->
 <aside id="demo-panel" class="collapsed" aria-label="시연용 DEMO 패널">
@@ -208,7 +232,8 @@
     <label class="demo-check"><input type="checkbox" id="demo-expand"> 전체 펼침(8단계 세로 보기)</label>
     <div class="demo-sec">이 데모의 위치</div>
     <p class="demo-note">판단 여권은 기존 앱의 종목 상세와 주문 사이에 끼워지는 판단 레이어예요.
-      ⑥ 모의 체결 자리는 실서비스에서 기존 주문 모듈이 연결되는 지점이에요(해커톤 규정상 실주문 없음).</p>
+      ⑧ 주문 화면(재현)이 실서비스에서 기존 주문 모듈이 이어받는 지점이에요 —
+      해커톤 규정상 실주문이 없어 ⑧의 버튼은 비활성이고, ⑥의 체결은 모의예요.</p>
   </div>
 </aside>
 

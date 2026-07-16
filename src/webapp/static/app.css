@@ -55,8 +55,8 @@ body {
 }
 #safety-bar b { font-weight: 800; }
 
-/* ── 중앙 모바일 폭 카드 ───────────────────────────────── */
-#phone {
+/* ── 중앙 모바일 폭 카드(위저드 본체 + 안전모드 화면 공용 룩) ───────── */
+#phone, #safemode-screen {
   max-width: 420px;
   margin: 14px auto 30px;
   background: var(--card);
@@ -90,10 +90,12 @@ body {
 body.expanded .step-panel { display: block; border-top: 2px dashed var(--line); padding-top: 10px; margin-top: 14px; }
 body.expanded .step-chip { display: inline-block; }
 body.expanded #wizard-nav { display: none; }
-/* 안전모드: ⑧만 표시(신규 주문 유도 전부 숨김) */
-body.safemode .step-panel { display: none !important; }
-body.safemode #step-8 { display: block !important; }
-body.safemode #wizard-nav, body.safemode #progress { display: none; }
+/* 안전모드(보기 방식 — 계약 §8): 위저드 전체(#phone — 신규 주문 유도 포함)를
+   조상째 숨기고 안전모드 화면만 표시. 조상이 숨으면 자손의 인라인 스타일이
+   무의미해지므로 요소별 display 우선순위 경쟁이 구조적으로 없다. */
+#safemode-screen { display: none; }
+body.safemode #phone { display: none !important; }
+body.safemode #safemode-screen { display: block; }
 
 h2 { font-size: 17px; margin: 6px 0 10px; }
 h3 { font-size: 15px; margin: 4px 0 8px; }
@@ -267,6 +269,19 @@ textarea { resize: vertical; }
 }
 .demo-scn.on { border-color: var(--dark); background: #f2f4f6; }
 .demo-note { font-size: 11px; color: var(--sub); line-height: 1.55; margin: 2px 0 0; }
+
+/* ⑧ 실앱 주문 화면 재현(비기능 — 계약 §9 재현 화면 규칙) */
+.order-tabs { display: flex; gap: 8px; margin: 8px 0; }
+.order-tab {
+  flex: 1; padding: 9px 0; border-radius: 10px; border: 1.5px solid var(--line);
+  background: #f6f7f9; color: var(--sub); font-size: 13px; font-weight: 800;
+  font-family: inherit;
+}
+#s8-tab-buy.on { background: #fff; color: var(--up); border-color: var(--up); }
+#s8-tab-sell.on { background: #fff; color: var(--down); border-color: var(--down); }
+.btn.order-fake { color: #fff; border: none; }
+.btn.order-fake.side-buy { background: var(--up); }
+.btn.order-fake.side-sell { background: var(--down); }
 
 @media (max-width: 460px) {
   #phone { margin: 8px 8px 24px; }

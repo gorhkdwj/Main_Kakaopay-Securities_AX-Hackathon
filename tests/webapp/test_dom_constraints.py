@@ -2,6 +2,8 @@
 
 검사 항목:
 - ①~⑤(및 홈·⑦·⑧) 영역에 주문 실행 버튼 부재 — 주문은 ⑥ 바텀시트에서만.
+  (⑧은 실앱 주문 화면의 '재현'이지만 비기능 — 버튼 disabled·배선 금지, 계약 §9)
+- 안전모드는 위저드 밖 오버레이(#safemode-screen) — 주문 UI 없음(계약 §8).
 - 검토 의향 4버튼 동일 클래스(동일 크기·색 위계 — 기본 강조 없음).
 - '원인' 단어 미사용('관련 사실'만) — 정적 파일·API 응답 전부.
 - 손실 화면에 추가 구매(추가매수) 유도 기본 노출 없음.
@@ -162,7 +164,38 @@ def test_required_ui_markers_present(client):
     assert 'id="demo-panel"' in html
     assert 'id="demo-safemode"' in html
     assert 'id="demo-expand"' in html
-    # 안전모드 CSS: 신규 주문 유도 UI 숨김(⑧만 표시)
+    # 안전모드 CSS: 위저드 전체(#phone)를 조상째 숨기고 안전모드 화면만 표시(오버레이 — 계약 §8)
+    assert 'id="safemode-screen"' in html
     css = read_static("app.css")
-    assert "body.safemode .step-panel" in css
-    assert "body.safemode #step-8" in css
+    assert "body.safemode #phone" in css
+    assert "body.safemode #safemode-screen" in css
+
+
+# ---------------------------------------------------------------------------
+# ⑧ 주문 화면(실앱 재현) — 비기능 보장(계약 §9 재현 화면 규칙)
+# ---------------------------------------------------------------------------
+
+def test_step8_replica_is_non_functional():
+    html = read_static("index.html")
+    js = read_static("app.js")
+    sec8 = section_slice(html, "step-8")
+
+    # 재현 라벨(시연용 안전 표기 — 계약 §9) + 앞 연결 배너
+    assert "실앱 주문 화면 재현(시연용)" in sec8
+    assert 'id="s8-briefing-entry"' in sec8
+
+    # 주문성 버튼 4종: 전부 disabled 정적 선언 + JS 클릭 배선 부재
+    for bid in ("s8-tab-buy", "s8-tab-sell", "s8-order-buy", "s8-order-sell"):
+        m = re.search(rf'<button[^>]*id="{bid}"[^>]*>', sec8)
+        assert m, f"{bid} 버튼이 ⑧에 없습니다"
+        assert "disabled" in m.group(0), f"{bid}가 disabled가 아닙니다"
+        assert f'el("{bid}").addEventListener' not in js, f"{bid}에 클릭 배선(비기능 위반)"
+
+
+def test_safemode_screen_has_no_order_ui():
+    html = read_static("index.html")
+    sec = section_slice(html, "safemode-screen")
+    assert 'data-role="order-execute"' not in sec
+    assert "체결하기" not in sec
+    assert "비상 절차" in sec
+    assert 'id="btn-safe-exit"' in sec

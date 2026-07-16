@@ -16,11 +16,10 @@ const S = {
   diaryText: "",
   settlement: null,
   savedRecord: null,
-  prevStepBeforeSafe: 0,
 };
 
 const STEP_NAMES = ["홈", "① 종목·계획", "② 관련 사실", "③ 체크리스트",
-  "④ 시나리오 비교", "⑤ 검토 의향", "⑥ 모의 주문", "⑦ 회고", "⑧ 안전모드"];
+  "④ 시나리오 비교", "⑤ 검토 의향", "⑥ 모의 주문", "⑦ 회고", "⑧ 주문 화면(재현)"];
 
 const INTENTS = {
   sell: ["그대로 유지", "일부 판매 검토", "전량 판매 검토", "나중에 재검토"],
@@ -181,7 +180,8 @@ function renderChrome() {
   el("btn-next").textContent = nextButtonLabel();
   const expanded = document.body.classList.contains("expanded");
   const safemode = document.body.classList.contains("safemode");
-  el("mock-order-bar").hidden = safemode || !(S.step === 6 || expanded);
+  // 모의 고정 바는 주문·체결 화면(⑥·⑧ 재현)에 상시 — 계약 §9 모의 표시
+  el("mock-order-bar").hidden = safemode || !(S.step === 6 || S.step === 8 || expanded);
 }
 /* ⑤에서 주문 의향(판매·구매 검토)을 고른 상태의 "다음"은 주문 화면(⑥) 진입이다 —
    실서비스에서 기존 주문 모듈로 넘어가는 핸드오프 이음새를 라벨로 보여준다(스펙 §0·계약 §9).
@@ -203,6 +203,7 @@ function renderAll() {
   renderStep6();
   renderStep7();
   renderStep8();
+  renderSafemode();
   renderChrome();
 }
 
@@ -691,10 +692,31 @@ async function saveRecord() {
   }
 }
 
-/* ⑧ 장애 안전모드 */
+/* ⑧ 주문 화면(실앱 재현 — 비기능·계약 §9 재현 화면 규칙): 표시만, 주문 버튼 배선 없음 */
 function renderStep8() {
+  const m = S.data.meta;
+  const name = m.instrument ? m.instrument.name : "";
+  const sell = m.side === "sell";
+  el("s8-header").innerHTML = `<div class="price-head">
+    <div><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span>
+      <span class="mk">${esc(m.market_label)}</span></div>
+    <div><span class="pr">${num(m.price.close)}</span>원 ${pctChange(m.price.change_pct)}</div>
+  </div>`;
+  el("s8-tab-buy").classList.toggle("on", !sell);
+  el("s8-tab-sell").classList.toggle("on", sell);
+  el("s8-order-buy").hidden = sell;   // 손실·판매 시나리오에서 구매 CTA 미노출(헌법 §14)
+  el("s8-order-sell").hidden = !sell;
+  el("s8-price").textContent = won(m.price.close);
   const st = S.settlement;
-  el("s8-order-state").innerHTML = `<div class="kcard">
+  el("s8-qty").textContent = st ? num(st.qty) + "주" : "—";
+  el("s8-handoff").innerHTML = st ? `<div class="kcard state">
+    모의 체결 기록: ${st.side === "sell" ? "판매" : "구매"} ${num(st.qty)}주 · ${won(st.price)} — 실제 거래 아님</div>` : "";
+}
+
+/* 장애 안전모드 화면(오버레이 — 계약 §8): 주문 상태 카드만 동적 */
+function renderSafemode() {
+  const st = S.settlement;
+  el("safe-order-state").innerHTML = `<div class="kcard">
     <div class="tag fact">내 주문 상태</div>
     ${st ? `모의 ${st.side === "sell" ? "판매" : "구매"} ${num(st.qty)}주 — 체결 기록이 있어요(${esc(st.settled_at)})`
          : "진행 중인 주문이 없어요."}
@@ -711,15 +733,14 @@ function renderDemoScenarios() {
   });
 }
 function toggleSafemode(onFlag) {
+  // 오버레이 방식: S.step을 바꾸지 않는다 — 해제하면 보던 화면·전체 펼침 상태 그대로 복귀(계약 §8)
+  document.body.classList.toggle("safemode", onFlag);
   if (onFlag) {
-    S.prevStepBeforeSafe = S.step;
-    document.body.classList.add("safemode");
-    renderStep8();
-  } else {
-    document.body.classList.remove("safemode");
-    goStep(S.prevStepBeforeSafe);
+    el("sheet-backdrop").hidden = true; // 열린 재확인 시트도 주문 유도 — 강제로 닫는다
+    renderSafemode();
   }
   renderChrome();
+  window.scrollTo({ top: 0 });
 }
 
 /* ── 이벤트 배선 ──────────────────────────────────────── */
@@ -768,13 +789,10 @@ function wireEvents() {
   el("btn-skip-order").addEventListener("click", () => goStep(7));
   el("btn-save-record").addEventListener("click", saveRecord);
   el("btn-safe-exit").addEventListener("click", () => {
-    if (document.body.classList.contains("safemode")) {
-      el("demo-safemode").checked = false;
-      toggleSafemode(false);
-    } else {
-      goStep(0);
-    }
+    el("demo-safemode").checked = false; // 버튼 해제는 change 이벤트가 없으므로 수동 동기화
+    toggleSafemode(false);
   });
+  el("s8-briefing-entry").addEventListener("click", () => goStep(1)); // ⑧ 앞 연결(레이어 진입 재현)
 
   el("demo-toggle").addEventListener("click", () => {
     const panel = el("demo-panel");
