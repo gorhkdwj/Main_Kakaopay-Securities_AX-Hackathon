@@ -157,3 +157,39 @@ def test_settle_rejects_tampered_preview(client):
     ok = client.post("/api/settle", json={"preview": p, "confirmed_qty": 10})
     assert ok.status_code == 200
     assert ok.json()["settlement"]["is_mock"] is True
+
+
+def test_broken_fixture_returns_graceful_error(tmp_path, records_dir):
+    """fixture JSON 파손 → 미처리 500(스택) 대신 계약 §8 오류 응답(fixture_invalid).
+
+    T-0716-2046: 파손 fixture가 unhandled 예외로 전파되면 화면에서는
+    '무반응'으로 인지된다 — 세 라우트 전부 한국어 오류 계약으로 변환돼야 한다.
+    """
+    from fastapi.testclient import TestClient
+
+    from src.webapp.app import create_app
+
+    vdir = tmp_path / "fixtures"
+    vdir.mkdir(parents=True)
+    (vdir / "scenario_loss8.json").write_text("{broken", encoding="utf-8")
+    client = TestClient(create_app(fixtures_dir=vdir, records_dir=records_dir),
+                        raise_server_exceptions=False)
+
+    r1 = client.get("/api/scenario/loss8")
+    assert r1.status_code == 500
+    assert r1.json()["ok"] is False
+    assert r1.json()["error"]["code"] == "fixture_invalid"
+    assert "loss8" in r1.json()["error"]["message"]
+
+    r2 = client.post("/api/preview",
+                     json={"scenario_id": "loss8", "side": "sell", "qty": 10})
+    assert r2.status_code == 500
+    assert r2.json()["error"]["code"] == "fixture_invalid"
+
+    r3 = client.post("/api/record", json={
+        "scenario_id": "loss8", "intent": "그대로 유지",
+        "reason_text": "테스트 사유입니다.",
+    })
+    assert r3.status_code == 500
+    assert r3.json()["error"]["code"] == "fixture_invalid"
+    assert not records_dir.exists()  # 오류 시 기록 미생성(§5.3)

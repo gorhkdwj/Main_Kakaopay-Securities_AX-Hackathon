@@ -34,6 +34,13 @@
     <span id="progress-label" aria-live="polite"></span>
   </nav>
 
+  <!-- 불러오기 오류 카드 — 어떤 fetch 실패도 무반응으로 두지 않는다(T-0716-2046) -->
+  <div id="app-error" class="kcard notice" role="alert" hidden>
+    <div class="tag unk">불러오기 오류</div>
+    <span id="app-error-text"></span>
+    <button id="app-error-retry" class="btn ghost" type="button" hidden>다시 시도</button>
+  </div>
+
   <!-- S0 · 보유 홈 -->
   <section id="step-0" class="step-panel" data-step="0" aria-label="홈 — 보유 현황">
     <span class="step-chip">홈</span>

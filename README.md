@@ -9,11 +9,19 @@
 - 원칙: AI는 결론을 말하지 않는다 — 출처·기준시각 있는 사실, 대칭 시나리오, 비용·세금·D+2 사전 고지, 모의 체결까지만
 
 ## 실행 방법
-(아직 구현된 실행 기능 없음 — 현재는 리서치·설계 산출물 단계. 구현 착수 후 이 절을 갱신한다.)
+데모 웹앱(오프라인 — LLM·외부 네트워크 0회로 완주):
+
+```
+.\.venv\Scripts\python.exe -m uvicorn src.webapp.app:app --port 8765 --reload
+```
+
+- 브라우저에서 http://127.0.0.1:8765 접속. 반드시 **프로젝트 루트에서** 실행한다(src는 namespace package).
+- 테스트 전체 실행: `.\.venv\Scripts\python.exe -m pytest -q`
+- **변경 반영 규칙**: 정적 파일(`src/webapp/static/`)과 fixture(`data/fixtures/`)는 서버 재시작 없이 반영된다 — 브라우저에서 강력 새로고침(Ctrl+F5)만 하면 된다. `app.py` 등 파이썬 코드는 서버 재시작이 필요하다 — `--reload` 옵션을 켜 두면 자동 재시작된다.
 
 ## 프로젝트 구조
-- `src/` 실행 코드(웹앱 본체 · `src/.codex-plugin/` 플러그인 포장 — 예정)
-- `tests/` 테스트·안전 테스트셋 (예정)
+- `src/` 실행 코드(`engine/` 결정론 계산 엔진 · `policy/` 표현 가드 · `webapp/` 웹앱 본체 · `.codex-plugin/` 플러그인 포장 — 예정)
+- `tests/` 테스트·안전 테스트셋(엔진·가드·웹앱 — pytest)
 - `scripts/` 데이터 수집·검증 스크립트 (research: 리서치 단계 산출)
 - `tools/` 보조 스크립트(프롬프트 로그 훅 — 수정 금지)
 - `data/snapshots/` 동결 시세 스냅샷 · `data/fixtures/` 오프라인 시나리오

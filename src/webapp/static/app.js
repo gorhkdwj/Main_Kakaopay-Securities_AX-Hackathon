@@ -60,11 +60,31 @@ function el(id) { return document.getElementById(id); }
 
 /* ── API ──────────────────────────────────────────────── */
 async function api(path, options) {
-  const res = await fetch(path, options);
+  let res;
+  try { res = await fetch(path, options); }
+  catch (e) { return { status: 0, body: null }; } // 네트워크 예외 — 호출부가 오류를 표시한다
   let body = null;
   try { body = await res.json(); } catch (e) { body = null; }
   if (body && body.safety) updateSafety(body.safety);
   return { status: res.status, body };
+}
+
+/* ── 불러오기 오류 카드(§5.3 — 어떤 fetch 실패도 화면에 흔적을 남긴다, T-0716-2046) ── */
+let retryAction = null;
+function showAppError(msg, retry) {
+  el("app-error").hidden = false;
+  el("app-error-text").textContent = msg;
+  retryAction = retry || null;
+  el("app-error-retry").hidden = !retry;
+}
+function clearAppError() {
+  el("app-error").hidden = true;
+  retryAction = null;
+}
+function loadFailReason(r) {
+  if (r.status === 0) return "서버에 연결하지 못했어요.";
+  if (r.body && r.body.error && r.body.error.message) return r.body.error.message;
+  return `서버 응답을 읽지 못했어요(HTTP ${r.status}).`;
 }
 function updateSafety(sf) {
   el("sf-facts").textContent = sf.facts_rendered;
@@ -76,16 +96,27 @@ function updateSafety(sf) {
 /* ── 시나리오 로드 ────────────────────────────────────── */
 async function loadScenarioList() {
   const r = await api("/api/scenarios");
-  if (r.body && r.body.ok) {
-    S.scenarios = r.body.scenarios;
-    renderDemoScenarios();
-    const def = S.scenarios.find((s) => s.is_default) || S.scenarios[0];
-    if (def) await loadScenario(def.scenario_id);
+  if (!r.body || !r.body.ok || !(r.body.scenarios || []).length) {
+    showAppError(
+      `시나리오 목록을 불러오지 못했어요 — ${loadFailReason(r)} 서버가 실행 중인지 확인해 주세요.`,
+      loadScenarioList);
+    return;
   }
+  clearAppError();
+  S.scenarios = r.body.scenarios;
+  renderDemoScenarios();
+  const def = S.scenarios.find((s) => s.is_default) || S.scenarios[0];
+  if (def) await loadScenario(def.scenario_id);
 }
 async function loadScenario(id) {
   const r = await api("/api/scenario/" + encodeURIComponent(id));
-  if (!r.body || !r.body.ok) return;
+  if (!r.body || !r.body.ok) {
+    showAppError(
+      `시나리오를 불러오지 못했어요 — ${loadFailReason(r)} 화면은 이전 상태 그대로예요.`,
+      () => loadScenario(id));
+    return;
+  }
+  clearAppError();
   S.scenarioId = id;
   S.data = r.body;
   S.step = 0;
@@ -730,6 +761,7 @@ function wireEvents() {
     S.diaryText = S.data.diary_draft;
   });
 
+  el("app-error-retry").addEventListener("click", () => { if (retryAction) retryAction(); });
   el("btn-open-sheet").addEventListener("click", openSheet);
   el("btn-sheet-back").addEventListener("click", () => { el("sheet-backdrop").hidden = true; });
   el("btn-settle").addEventListener("click", doSettle);
