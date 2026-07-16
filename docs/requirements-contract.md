@@ -21,7 +21,7 @@
 
 | ID | 형식 | 발급 주체 | 용도 |
 |---|---|---|---|
-| source_id | 리서치 근거 = 병합 대장 ID(`F-/C-/X-SRC-####`) / 데모 가상 출처 = `DEMO-SRC-###` | fixture 작성 시 고정 | facts의 출처 추적. **DEMO-SRC는 가상 라벨임을 화면에 "(가상)"으로 병기** |
+| source_id | 리서치 근거 = 병합 대장 ID(`F-/C-/X-SRC-####`) / 데모 가상 출처 = `DEMO-SRC-###` | fixture 작성 시 고정 | facts의 출처 추적. **DEMO-SRC는 가상 라벨임을 화면에 "(가상)"으로 병기**. 부여 규약: 백의 자리 1=가온전자·2=한빛식품·3=다온소재, 끝자리 01=공시(fixture disclosures)·02=시세·거래량(값의 원천은 fixture price/volume — 화면 조립부가 사용) |
 | calculation_id | `CALC-YYYYMMDD-HHMMSS-<seq>` | engine | 계산 결과 ↔ AI 응답 ↔ 화면 표의 연결. LLM 출력의 숫자는 반드시 이 ID의 결과에서만 인용 |
 | decision_record_id | `REC-<세션>-<seq>` | webapp | 사후 회고(판단 기록) 식별 |
 | 운영 로그 ID | `W-/D-/T-MMDD-HHMM-세션` | 각 세션 | 헌법 §11·§13 |
