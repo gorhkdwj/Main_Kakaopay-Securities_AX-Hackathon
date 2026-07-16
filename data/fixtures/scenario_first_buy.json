@@ -1,0 +1,49 @@
+{
+  "scenario_id": "first_buy",
+  "as_of": "2026-07-17 15:30 KST",
+  "is_synthetic": true,
+  "instrument": {
+    "code": "DEMO-DAON",
+    "name": "다온소재",
+    "market": "KOSPI"
+  },
+  "price": {
+    "close": 46000,
+    "prev_close": 45500,
+    "change_pct": 1.1
+  },
+  "volume": {
+    "today": 198000,
+    "avg20": 180000,
+    "ratio": 1.1
+  },
+  "holding": {
+    "qty": 0,
+    "avg_price": null
+  },
+  "cash": 1000000,
+  "portfolio_total_value": 1000000,
+  "plan": null,
+  "disclosures": [
+    {
+      "text": "2분기 잠정 영업이익 195억 원 — 전년 동기 대비 +7%",
+      "source_id": "DEMO-SRC-301",
+      "published_at": "2026-07-10 09:00 KST"
+    }
+  ],
+  "interpretations": [
+    {
+      "text": "이익이 완만하게 늘고 있어 사업이 안정적으로 운영되고 있다는 시각",
+      "stance": "긍정 시각"
+    },
+    {
+      "text": "성장률(+7%)이 완만해, 기대하는 성장 속도에 따라 평가가 달라질 수 있다는 시각",
+      "stance": "부정 시각"
+    }
+  ],
+  "trade_date": "2026-07-17",
+  "community_buzz": {
+    "level": "보통",
+    "note": "첫 매수 검토에서 커뮤니티 인기는 근거가 아닙니다"
+  }
+}

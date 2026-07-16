@@ -1,0 +1,54 @@
+{
+  "scenario_id": "loss8",
+  "as_of": "2026-07-17 15:30 KST",
+  "is_synthetic": true,
+  "instrument": {
+    "code": "DEMO-GAON",
+    "name": "가온전자",
+    "market": "KOSPI"
+  },
+  "price": {
+    "close": 46000,
+    "prev_close": 50000,
+    "change_pct": -8.0
+  },
+  "volume": {
+    "today": 576000,
+    "avg20": 180000,
+    "ratio": 3.2
+  },
+  "holding": {
+    "qty": 30,
+    "avg_price": 50000
+  },
+  "cash": 0,
+  "portfolio_total_value": 4900000,
+  "plan": {
+    "horizon": "3년 이상",
+    "max_loss_pct": -15,
+    "review_condition": "실적 2개 분기 연속 악화",
+    "recorded_at": "2026-03-02"
+  },
+  "disclosures": [
+    {
+      "text": "3분기 잠정 영업이익 128억 원 — 전년 동기 대비 -32%",
+      "source_id": "DEMO-SRC-101",
+      "published_at": "2026-07-17 09:10 KST"
+    }
+  ],
+  "interpretations": [
+    {
+      "text": "영업이익 감소에는 일회성 비용(신공장 초기 가동)이 포함되어 있어, 수요 둔화로 보기는 이르다는 시각",
+      "stance": "긍정 시각"
+    },
+    {
+      "text": "2개 분기 연속 이익 감소 여부가 다음 발표에서 확인되면 사용자가 기록한 계획의 재검토 조건에 해당한다는 시각",
+      "stance": "부정 시각"
+    }
+  ],
+  "trade_date": "2026-07-17",
+  "community_buzz": {
+    "level": "높음",
+    "note": "커뮤니티 언급량이 급증했습니다 — 인기와 근거는 별개입니다"
+  }
+}

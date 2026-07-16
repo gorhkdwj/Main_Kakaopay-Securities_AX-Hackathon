@@ -1,0 +1,54 @@
+{
+  "scenario_id": "profit15",
+  "as_of": "2026-07-17 15:30 KST",
+  "is_synthetic": true,
+  "instrument": {
+    "code": "DEMO-HANBIT",
+    "name": "한빛식품",
+    "market": "KOSPI"
+  },
+  "price": {
+    "close": 46000,
+    "prev_close": 44000,
+    "change_pct": 4.5
+  },
+  "volume": {
+    "today": 432000,
+    "avg20": 180000,
+    "ratio": 2.4
+  },
+  "holding": {
+    "qty": 20,
+    "avg_price": 40000
+  },
+  "cash": 0,
+  "portfolio_total_value": 4900000,
+  "plan": {
+    "horizon": "1년",
+    "max_loss_pct": -10,
+    "review_condition": "목표 +20% 도달 또는 신제품 실적 확인",
+    "recorded_at": "2026-05-11"
+  },
+  "disclosures": [
+    {
+      "text": "2분기 잠정 매출 812억 원 — 전년 동기 대비 +18%",
+      "source_id": "DEMO-SRC-201",
+      "published_at": "2026-07-17 08:40 KST"
+    }
+  ],
+  "interpretations": [
+    {
+      "text": "매출 증가가 신제품 판매 확대에서 나왔다는 점에서 회사 성장의 근거가 확인됐다는 시각",
+      "stance": "긍정 시각"
+    },
+    {
+      "text": "하루 +4.5% 급등에는 실적 외 수급 요인이 섞여 있을 수 있어, 상승분의 성격을 구분해 볼 필요가 있다는 시각",
+      "stance": "부정 시각"
+    }
+  ],
+  "trade_date": "2026-07-17",
+  "community_buzz": {
+    "level": "보통",
+    "note": "언급량이 완만히 늘고 있습니다 — 인기와 근거는 별개입니다"
+  }
+}
