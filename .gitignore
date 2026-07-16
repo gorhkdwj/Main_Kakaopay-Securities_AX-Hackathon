@@ -16,6 +16,9 @@ secrets/
 *.key
 *.pem
 
+# 실계좌 정보가 담긴 앱 캡처 — 로컬 참고 전용, 커밋·푸시 금지 (헌법 §7)
+docs/references/image/
+
 # 실행 결과·임시 산출물
 out/
 
