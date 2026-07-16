@@ -44,3 +44,10 @@
 **확인된 원인** — `#sheet-backdrop { display:flex }`(ID 선택자)가 브라우저 기본 `[hidden]{display:none}`(속성 선택자)보다 우선해, JS의 `hidden=true`가 시각적으로 무력화됨. 자동 검증(TestClient)은 서버 응답 계층만 보고 JS·CSS 런타임을 못 보는 갭에서 발생 — subagent도 "실브라우저 육안 리허설 미수행"으로 명시했던 영역.
 **조치(최종 해결)** — `[hidden]{display:none !important}` 전역 규칙 추가 후, **playwright 실브라우저로 사용자 재현 경로 전체를 자동 검증**: 홈→⑤(의향 선택·일지 입력)→⑥ 시트 열림(display:flex)→모의 체결→시트 닫힘(display:none)→다음 버튼 정상(⑦ 이동)→기록 저장(REC 발급)→⑧, first_buy 자동완성 초안·안전모드 토글 on/off까지 통과, 콘솔 에러·경고 0.
 **재발 방지** — ① UI 표시 토글은 `hidden` 속성 + 전역 `[hidden]` 규칙 병용을 표준으로 ② 화면(JS·CSS) 변경의 통합 게이트에 **실브라우저 완주 검증(playwright)** 을 포함 — TestClient 통과만으로 화면 완료를 선언하지 않는다.
+
+### T-0716-2046-main · DEMO 패널 시나리오 전환 무반응(사용자 환경) — 3중 silent failure
+**발생 상황** — 사용자 실사용 검토 중 "데모 시연 장치의 -8% 급락 이외 다른 시나리오 선택이 안 됨" 신고. 같은 코드로 검증 서버(8766)에서는 직전 라운드 playwright 전환 성공 이력 존재.
+**증상** — DEMO 패널의 profit15·first_buy 버튼 클릭 시 화면 무변화·오류 표시 없음.
+**확인된 원인** — 정적 파일·fixture는 요청마다 재로딩(app.py:329-336)이라 서버 프로세스 구버전 단독으로는 설명 불가. 코드에서 확정된 결함 3건: ① `loadScenario` 실패 시 silent return(app.js:88 — 404·파싱 실패가 무반응으로 인지됨) ② `api()`의 fetch 예외 미방어(app.js:63 — 네트워크 예외 시 unhandled rejection, 무표시) ③ fixture JSON 파손 시 미처리 500(app.py:336). (불확실점: 사용자 환경의 실제 트리거 — 브라우저의 구버전 app.js 캐시 또는 일시 네트워크 예외로 추정, 원격 재현 불가)
+**조치(최종 해결)** — 실패 3경로 전부 가시화: api() fetch try/catch, `#app-error` 오류 카드(사유+이전 화면 유지 안내+[다시 시도]), `FixtureInvalidError` → 500 계약 오류. README 실행 방법에 `--reload` 권고·강력 새로고침(Ctrl+F5) 안내 신설. 신선 서버에서 3시나리오 전환+오류 주입 playwright 재검증.
+**재발 방지** — ① **어떤 fetch 실패도 화면에 흔적을 남긴다**(silent return 금지 — T-0716-1510의 "무반응=먹통 인지" 교훈 일반화) ② 데모 실행 안내에 서버·브라우저 캐시 재기동 절차 명시.
