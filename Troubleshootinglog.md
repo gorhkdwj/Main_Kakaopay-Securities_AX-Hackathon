@@ -23,3 +23,10 @@
 **확인된 원인** — ① git 기본 `core.quotepath=true` ② PS 5.1의 네이티브 명령 인자 재인용 규칙(내장 큰따옴표 미이스케이프) ③ Windows 콘솔 기본 코드페이지 cp949.
 **조치(최종 해결)** — ① `git -c core.quotepath=false diff --name-only`로 재실행해 9파일 전수 스캔(누락 0·검출 0) ② 메시지의 큰따옴표를 괄호 표기로 대체 후 커밋 성공(cc4f243) ③ 스크립트 서두에 `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` 추가 후 전건 통과.
 **재발 방지** — 스캔·수집 명령은 항상 `-c core.quotepath=false` 병용(S3의 scan_secrets.py에 내장), 커밋 메시지에 큰따옴표 미사용(따옴표 필요 시 「」·[ ] 사용), 이후 모든 파이썬 스크립트에 stdout 재설정 패턴 포함.
+
+### T-0716-1112-main · pykrx 익명 수집 불가 — KRX 계정 로그인 요구 (R2 리스크 사전 실현)
+**발생 상황** — D7 조건("기술적으로 호출이 되는가") 사전 검증을 위해 venv 구성 직후 pykrx 지수 조회 스모크 테스트 실행(7/17 본수집 하루 전).
+**증상** — `stock.get_index_ohlcv()`가 「KRX 로그인 실패: KRX_ID 또는 KRX_PW 환경 변수가 설정되지 않았습니다」 + JSON 파싱 오류(`Expecting value: line 1 column 1`) + `KeyError: '지수명'`으로 실패.
+**확인된 원인** — 현행 pykrx가 KRX 데이터 API 접근에 계정 자격증명(환경변수 KRX_ID/KRX_PW)을 요구 — 기획서 R2가 예측한 "KRX 로그인 요구" 시나리오의 실현. (불확실점: KRX 정보데이터시스템 웹 수동 다운로드의 로그인 요구 여부는 미확인)
+**조치(최종 해결)** — 대안 yfinance를 즉시 설치·검증: 코스피(^KS11)·코스닥(^KQ11) 지수 종가 조회 성공(7/16 당일분 포함). 수집 주 경로를 yfinance로 교체(D-0716-1115-main), requirements.txt·lock 갱신, 계획 2종(S6·R2) 반영.
+**재발 방지** — 외부 데이터 의존은 사용 전날이 아니라 **가능한 가장 이른 시점에 스모크 테스트**(이번처럼 D+1 전 검증으로 R2가 무위험 전환됨). pykrx는 KRX 계정 생성 시에만 대체 옵션으로 유지.

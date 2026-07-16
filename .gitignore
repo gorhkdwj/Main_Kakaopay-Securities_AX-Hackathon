@@ -5,6 +5,9 @@ logs/
 __pycache__/
 *.py[cod]
 
+# 가상환경
+.venv/
+
 # Local secrets
 .env
 .env.*
