@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>판단 여권 — 데모 (교육용 가상 데이터)</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<!-- 상단 고정: 모의 주문 바(⑥에서만 표시) · 교육용 가상 데이터 배지 · 안전 지표 카운터 -->
+<div id="mock-order-bar" hidden>모의 주문 — 실제 거래 아님</div>
+<header id="top-bars">
+  <div id="sim-badge" aria-label="데이터 상태 배지">교육용 가상 데이터</div>
+  <div id="safety-bar" aria-label="안전 지표 카운터" title="세션 누적 안전 지표(계약 §10)">
+    안전 지표 — 렌더된 사실 <b id="sf-facts">0</b> · 무출처 차단 <b id="sf-nosrc">0</b> ·
+    금지 표현 <b id="sf-forbid">0</b> · 기준시각 누락 <b id="sf-asof">0</b>
+  </div>
+</header>
+
+<main id="phone" aria-label="판단 여권 데모 화면(중앙 모바일 폭)">
+
+  <!-- 진행 인디케이터 ①~⑧ -->
+  <nav id="progress" aria-label="진행 단계">
+    <button class="pg" data-goto="1" title="종목·계획">①</button>
+    <button class="pg" data-goto="2" title="관련 사실">②</button>
+    <button class="pg" data-goto="3" title="체크리스트">③</button>
+    <button class="pg" data-goto="4" title="시나리오 비교">④</button>
+    <button class="pg" data-goto="5" title="검토 의향">⑤</button>
+    <button class="pg" data-goto="6" title="모의 주문">⑥</button>
+    <button class="pg" data-goto="7" title="회고">⑦</button>
+    <button class="pg" data-goto="8" title="안전모드">⑧</button>
+    <span id="progress-label" aria-live="polite"></span>
+  </nav>
+
+  <!-- S0 · 보유 홈 -->
+  <section id="step-0" class="step-panel" data-step="0" aria-label="홈 — 보유 현황">
+    <span class="step-chip">홈</span>
+    <h2 id="s0-title">오늘의 보유 현황이에요</h2>
+    <div id="s0-holding"></div>
+    <div class="kcard notice">
+      <div class="tag interp">오늘의 안내</div>
+      지금 판단이 어려우실 수 있어요. 결론을 정해 드리는 대신,
+      <b>확인된 사실과 선택지</b>를 정리해 드릴게요.
+    </div>
+    <button id="btn-start" class="btn dark" type="button">판단 전 브리핑 시작하기</button>
+    <button id="btn-later" class="btn ghost" type="button">나중에 볼게요</button>
+    <p class="footnote">이 데모는 특정 방향을 권하지 않아요 · 모든 주문은 모의(가상)예요.</p>
+  </section>
+
+  <!-- ① 종목 상세 + 계획 회상 -->
+  <section id="step-1" class="step-panel" data-step="1" aria-label="1단계 — 종목 상세와 계획 회상">
+    <span class="step-chip">① 종목·계획</span>
+    <div id="s1-header"></div>
+    <div id="s1-plan"></div>
+    <div id="s1-remind"></div>
+    <div id="s1-discovery"></div>
+  </section>
+
+  <!-- ② 관련 사실 브리핑 -->
+  <section id="step-2" class="step-panel" data-step="2" aria-label="2단계 — 관련 사실 브리핑">
+    <span class="step-chip">② 관련 사실</span>
+    <h2>오늘 움직임에 대해 확인된 것이에요</h2>
+    <p class="sub-note">모든 사실 카드에는 출처와 기준시각이 붙어요 · 사실 / 해석 / 알 수 없음을 나눠서 보여드려요.</p>
+    <div id="s2-facts"></div>
+    <div id="s2-interps"></div>
+    <div id="s2-unknowns"></div>
+    <div id="s2-questions"></div>
+    <div id="s2-buzz"></div>
+  </section>
+
+  <!-- ③ 체크리스트 -->
+  <section id="step-3" class="step-panel" data-step="3" aria-label="3단계 — 결정 전 체크리스트">
+    <span class="step-chip">③ 체크리스트</span>
+    <h2>결정 전, 다섯 가지만 확인해요</h2>
+    <div id="s3-checklist"></div>
+    <div class="kcard">
+      <div class="tag interp">이해 확인 · 1문항</div>
+      <p class="q-text">"시장가 주문은 화면에 표시된 가격 그대로 체결된다" — 맞을까요?</p>
+      <div class="ox-row">
+        <button class="btn quiz" id="quiz-o" type="button">O</button>
+        <button class="btn quiz" id="quiz-x" type="button">X</button>
+      </div>
+      <p id="quiz-answer" class="footnote" hidden>정답은 X — 시장가 체결가는 표시 가격과 다를 수 있어요. 이 데모의 계산은 지정가(표시 가격) 기준이에요.</p>
+    </div>
+    <div id="s3-notice"></div>
+  </section>
+
+  <!-- ④ 대칭 시나리오 비교 -->
+  <section id="step-4" class="step-panel" data-step="4" aria-label="4단계 — 대칭 시나리오 비교표">
+    <span class="step-chip">④ 시나리오 비교</span>
+    <h2>선택지를 나란히 볼게요</h2>
+    <div id="s4-basis" class="calc-basis"></div>
+    <div id="s4-qty"></div>
+    <div id="s4-table" role="region" aria-label="선택지 비교표 — 모든 열은 같은 크기이고 강조색이 없어요"></div>
+    <div class="kcard warnish">
+      <div class="tag unk">잊기 쉬운 것</div>
+      <span id="s4-remember"></span> 각 열의 크기는 같아요 — 선택은 사용자의 몫이에요.
+    </div>
+    <p class="footnote">이 화면은 비교만 해요. 주문은 별도 화면(⑥ 모의 주문)에서만 진행돼요 · 숫자는 전부 계산 엔진 결과예요.</p>
+  </section>
+
+  <!-- ⑤ 검토 의향 + 투자 일지 -->
+  <section id="step-5" class="step-panel" data-step="5" aria-label="5단계 — 검토 의향과 투자 일지">
+    <span class="step-chip">⑤ 검토 의향</span>
+    <h2>지금 생각은 어느 쪽에 가까운가요?</h2>
+    <p class="sub-note">이 버튼은 주문이 아니에요 — 생각을 정리하는 단계예요. 네 버튼의 크기와 색은 같아요.</p>
+    <div class="intent-grid" role="group" aria-label="검토 의향 4가지 — 동일 크기·동일 색">
+      <button class="intent-btn" data-slot="0" type="button"></button>
+      <button class="intent-btn" data-slot="1" type="button"></button>
+      <button class="intent-btn" data-slot="2" type="button"></button>
+      <button class="intent-btn" data-slot="3" type="button"></button>
+    </div>
+    <div class="kcard">
+      <div class="tag fact">투자 일지 — 내 이유 한 문장</div>
+      <textarea id="diary-input" rows="3" aria-label="투자 일지 입력"
+        placeholder="이 선택을 검토하는 이유를 내 말로 적어 주세요."></textarea>
+      <button id="btn-draft" class="btn ghost" type="button" hidden>자동완성 초안 불러오기</button>
+      <p id="draft-note" class="footnote" hidden>초안은 내가 탐색에서 한 행동 사실만으로 만들어져요 — 수정할 수 있고, 저장은 회고 화면의 저장 버튼으로만 돼요(자동 저장 없음).</p>
+    </div>
+    <p class="footnote">일지는 ⑦ 회고 화면에서 저장 버튼을 눌러야 저장돼요 — 자동으로 저장되지 않아요.</p>
+  </section>
+
+  <!-- ⑥ 별도 모의 주문 화면(주문 실행 버튼은 이 섹션에만 존재) -->
+  <section id="step-6" class="step-panel" data-step="6" aria-label="6단계 — 별도 모의 주문 화면">
+    <span class="step-chip">⑥ 모의 주문</span>
+    <h2>모의 주문 확인이에요</h2>
+    <div id="s6-summary"></div>
+    <div id="s6-actions">
+      <button id="btn-open-sheet" class="btn dark" type="button" hidden>주문 내용 확인하기</button>
+      <button id="btn-skip-order" class="btn ghost" type="button" hidden>주문 없이 회고로 가기</button>
+    </div>
+    <div id="s6-result"></div>
+
+    <!-- 실앱 스타일 바텀시트(재확인 — 필수 고지 4종) -->
+    <div id="sheet-backdrop" hidden>
+      <div id="order-sheet" role="dialog" aria-modal="true" aria-label="주문 재확인 바텀시트">
+        <h3>제출 전 마지막 확인이에요</h3>
+        <div id="sheet-rows"></div>
+        <div id="sheet-notices"></div>
+        <label class="confirm-label" for="confirm-qty">수량을 다시 입력해 확인해 주세요</label>
+        <input id="confirm-qty" type="number" inputmode="numeric" aria-label="확인 수량 입력">
+        <p id="sheet-error" class="err-text" hidden></p>
+        <button id="btn-settle" class="btn exec" data-role="order-execute" type="button">모의 체결하기</button>
+        <button id="btn-sheet-back" class="btn ghost" type="button">돌아가기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ 사후 회고 -->
+  <section id="step-7" class="step-panel" data-step="7" aria-label="7단계 — 사후 회고와 기록 저장">
+    <span class="step-chip">⑦ 회고</span>
+    <h2>오늘의 판단을 기록으로 남겨요</h2>
+    <div id="s7-settlement"></div>
+    <div id="s7-contrast"></div>
+    <div class="kcard">
+      <div class="tag fact">다음 재검토 — 언제, 무엇을 확인할까요?</div>
+      <input id="retro-input" type="text" aria-label="다음 재검토 메모"
+        placeholder="예: 다음 실적 발표에서 재검토 조건 해당 여부 확인">
+    </div>
+    <button id="btn-save-record" class="btn dark" type="button">투자 일지 저장하기</button>
+    <p id="record-error" class="err-text" hidden></p>
+    <div id="s7-saved"></div>
+  </section>
+
+  <!-- ⑧ 장애 안전모드 -->
+  <section id="step-8" class="step-panel" data-step="8" aria-label="8단계 — 장애 안전모드">
+    <span class="step-chip">⑧ 안전모드</span>
+    <div class="alert-band">일시적 접속 지연이 감지된 상황이에요(데모) — 안전모드로 전환됐어요</div>
+    <h2>지금은 이것만 보여드릴게요</h2>
+    <div id="s8-order-state"></div>
+    <div class="kcard">
+      <div class="tag fact">공지</div>
+      일부 접속 지연이 확인됐어요(데모 상황). 복구 시점은 확인되는 대로 공지돼요 — 미리 단정해 말하지 않아요.
+    </div>
+    <div class="kcard">
+      <div class="tag unk">비상 절차</div>
+      안전모드에서는 새 주문을 권하지 않아요 — 신규 주문 유도 화면은 전부 숨겨져요.
+      급한 주문이 필요하면 <b>고객센터·ARS(데모 안내)</b>를 이용하고, 필요한 화면은 캡처로 남겨 두세요.
+    </div>
+    <button id="btn-safe-exit" class="btn ghost" type="button">안전모드 해제하고 돌아가기</button>
+  </section>
+
+  <!-- 위저드 내비게이션(취소·돌아가기 = 진행과 동일 위계) -->
+  <div id="wizard-nav">
+    <button id="btn-prev" class="btn nav" type="button">← 돌아가기</button>
+    <button id="btn-next" class="btn nav" type="button">다음 단계 →</button>
+  </div>
+</main>
+
+<!-- 접이식 DEMO 패널(우측 하단) -->
+<aside id="demo-panel" class="collapsed" aria-label="시연용 DEMO 패널">
+  <button id="demo-toggle" type="button" aria-expanded="false">DEMO 패널 열기</button>
+  <div id="demo-body">
+    <div class="demo-title">시연 장치</div>
+    <div class="demo-sec">시나리오 전환</div>
+    <div id="demo-scenarios" role="group" aria-label="시나리오 전환 버튼"></div>
+    <div class="demo-sec">보기 방식</div>
+    <label class="demo-check"><input type="checkbox" id="demo-safemode"> 장애 안전모드</label>
+    <label class="demo-check"><input type="checkbox" id="demo-expand"> 전체 펼침(8단계 세로 보기)</label>
+  </div>
+</aside>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
