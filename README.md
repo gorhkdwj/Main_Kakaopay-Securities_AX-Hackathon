@@ -20,9 +20,11 @@
 - `docs/` 기획·리서치·검증 문서 · `out/` 임시 산출물(Git 제외) · `logs/` 프롬프트 로그(무편집 제출물, Git 제외)
 
 ## 문서
-- 작업 규칙(헌법): `CLAUDE.md` — 멀티 세션 worktree 협업 규약 포함
+- 작업 규칙(헌법): `CLAUDE.md`(Claude) · `AGENTS.md`(Codex) — 동일한 공통 헌법과 멀티 세션 worktree 협업 규약을 제공한다.
+- 헌법 동기화: 공통 규칙 변경 시 두 파일을 같은 작업 단위에서 함께 수정하고, 도구별 차이는 각 문서의 전용 블록에만 둔다.
 - 작업 이력: `Worklog.md` · 주요 결정: `Decisionlog.md` · 문제 해결: `Troubleshootinglog.md`
-- 기획: `docs/project-plan.md` · 기준 계약: `docs/requirements-contract.md` · 구현 계획: `docs/implementation-plan.md` · 검증 계획: `docs/validation-plan.md`
+- 계획 3종(`docs/plans/`): 기획 `project-plan.md` · 구현 `implementation-plan.md` · 검증 `validation-plan.md` — 모든 구현·설계 작업의 기준(헌법 §2)
+- 기준 계약: `docs/requirements-contract.md` — 지표·수식·스키마·표기의 단일 기준(골든값·안전 지표 분모·금지 표현 사전 포함, 헌법 §5)
 - 리서치(교차검증 완료): `docs/report/2026-07-17_리서치_최종보고.html` (출처 402·주장 123) · 목업: `docs/mockup/2026-07-17_판단여권_목업.html`
 - 본선 규정: `docs/notice/` — **당일 공지가 본 저장소의 모든 문서보다 우선한다**
 
