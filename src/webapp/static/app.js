@@ -328,14 +328,14 @@ function renderStep3() {
   </div>`;
 
   const cost = side === "sell"
-    ? "비용: 수수료 0.015% + 거래세·농특세 0.20%가 판매대금에서 빠져요."
-    : "비용: 수수료 0.015%가 결제액에 더해져요(구매는 거래세·농특세 없음).";
+    ? "비용: 수수료 0.015% + 세금 0.20%가 판매대금에서 빠져요 — 여기서 세금은 증권거래세·농어촌특별세를 합한 금액이에요."
+    : "비용: 수수료 0.015%가 결제액에 더해져요 — 구매할 때는 세금이 붙지 않아요.";
   el("s3-notice").innerHTML = `<div class="kcard">
     <div class="tag fact">주문 전 알아 둘 것</div>
     <div class="checkline">주문 유형: 이 데모는 지정가(표시 가격) 기준이에요 — 시장가는 표시 가격과 다르게 체결될 수 있어요.</div>
     <div class="checkline">${esc(cost)}</div>
     <div class="checkline">출금·결제: 대금은 체결 2영업일 뒤(D+2)에 움직여요.</div>
-    <div class="checkline">비가역: 체결 후에는 취소할 수 없어요.</div>
+    <div class="checkline">취소: 체결 뒤에는 되돌릴 수 없어요.</div>
   </div>`;
 }
 
@@ -345,7 +345,7 @@ function renderStep4() {
   const side = m.side;
   el("s4-basis").textContent =
     `가상 기준시각 ${m.as_of} · 지정가 ${num(m.price.close)}원 · 수수료 0.015%` +
-    (side === "sell" ? " · 거래세·농특세 0.20%" : " · 구매는 거래세·농특세 없음");
+    (side === "sell" ? " · 세금 0.20%" : " · 구매는 세금 없음");
   el("s4-remember").textContent = side === "sell"
     ? "판매는 되돌릴 수 없고, 대금 출금은 체결 2영업일 뒤예요."
     : "체결 후에는 취소할 수 없고, 결제 대금은 체결 2영업일 뒤에 움직여요.";
@@ -370,7 +370,7 @@ function renderStep4() {
           <th>전량 판매(${num(holdingQty())}주${fv && fv.is_full_sell ? " — 보유 전량입니다" : ""})</th></tr>
       <tr><td>대금</td><td>—</td><td>${pv ? won(pv.gross_amount) : "—"}</td><td>${fv ? won(fv.gross_amount) : "—"}</td></tr>
       <tr><td>수수료</td><td>—</td><td>${pv ? won(pv.fee) : "—"}</td><td>${fv ? won(fv.fee) : "—"}</td></tr>
-      <tr><td>거래세·농특세</td><td>—</td><td>${pv ? won(pv.tax) : "—"}</td><td>${fv ? won(fv.tax) : "—"}</td></tr>
+      <tr><td>세금</td><td>—</td><td>${pv ? won(pv.tax) : "—"}</td><td>${fv ? won(fv.tax) : "—"}</td></tr>
       <tr><td>예상 수령액</td><td>—</td><td>${pv ? "<b>" + won(pv.net_proceeds) + "</b>" : "—"}</td><td>${fv ? "<b>" + won(fv.net_proceeds) + "</b>" : "—"}</td></tr>
       <tr><td>확정 손익</td><td>0원(평가손익 ${hold ? pnlMoney(hold.eval_pnl) : "—"} 유지)</td>
           <td>${pv ? pnlMoney(pv.realized_pnl) : "—"}</td><td>${fv ? pnlMoney(fv.realized_pnl) : "—"}</td></tr>
@@ -477,7 +477,7 @@ function renderStep6() {
   if (m.side === "sell") {
     rows.push(["예상 판매대금", won(v.gross_amount)],
       ["수수료", won(v.fee)],
-      ["거래세·농특세", won(v.tax)],
+      ["세금", won(v.tax)],
       ["예상 수령액", `<b>${won(v.net_proceeds)}</b>`],
       ["실현손익(예상)", pnlMoney(v.realized_pnl)],
       ["출금 가능일", `${dateLabel(v.settlement_date)} — 체결 2영업일 뒤(D+2)`]);
@@ -517,15 +517,15 @@ function openSheet() {
   ].map(([k, val]) => `<div class="sheet-row"><span>${k}</span><span>${val}</span></div>`).join("");
 
   const notices = sideSell ? [
-    `수수료 ${won(v.fee)} + 거래세·농특세 ${won(v.tax)}가 대금에서 빠져요.`,
+    `수수료 ${won(v.fee)}과 세금 ${won(v.tax)}이 대금에서 빠져요.`,
     `실현손익(예상): ${pnlMoney(v.realized_pnl)} — 체결 시 확정돼요.`,
     `출금 가능일: ${dateLabel(v.settlement_date)} — 체결 2영업일 뒤(D+2)예요.`,
-    "체결 후에는 취소할 수 없어요(비가역).",
+    "체결 후에는 취소할 수 없어요.",
   ] : [
-    `수수료 ${won(v.fee)}가 결제액에 더해져요(구매는 거래세·농특세 없음).`,
+    `수수료 ${won(v.fee)}이 결제액에 더해져요(구매는 세금 없음).`,
     `총 결제예정액 ${won(v.total_cost)} · 잔여 예수금 ${won(v.remaining_cash)}.`,
     `결제일: ${dateLabel(v.settlement_date)} — 체결 2영업일 뒤(D+2)예요.`,
-    "체결 후에는 취소할 수 없어요(비가역)."
+    "체결 후에는 취소할 수 없어요."
       + (v.concentration_warning ? ` 구매 후 비중 ${v.weight_after_pct.toFixed(1)}% — 집중도 경고(정보 표시).` : ""),
   ];
   el("sheet-notices").innerHTML = notices.map((t, i) =>

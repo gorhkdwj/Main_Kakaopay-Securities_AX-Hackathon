@@ -266,6 +266,7 @@ textarea { resize: vertical; }
   margin: 4px 0; cursor: pointer; font-family: inherit;
 }
 .demo-scn.on { border-color: var(--dark); background: #f2f4f6; }
+.demo-note { font-size: 11px; color: var(--sub); line-height: 1.55; margin: 2px 0 0; }
 
 @media (max-width: 460px) {
   #phone { margin: 8px 8px 24px; }
