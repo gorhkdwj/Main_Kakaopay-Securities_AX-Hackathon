@@ -13,6 +13,7 @@ const S = {
   partialQty: 10,      // ④ 일부 판매 수량(기본 10주)
   previews: {},        // key(partial|full|b8|b10) → {preview}|{error}
   intent: null,        // ⑤ 검토 의향(4택 라벨)
+  settledIntent: null, // 체결 시점 의향 스냅샷 — ⑦ "선택:" 표기 고정(이후 의향 변경과 분리)
   diaryText: "",
   settlement: null,
   savedRecord: null,
@@ -122,6 +123,7 @@ async function loadScenario(id) {
   S.partialQty = 10;
   S.previews = {};
   S.intent = null;
+  S.settledIntent = null;
   S.diaryText = "";
   S.settlement = null;
   S.savedRecord = null;
@@ -188,6 +190,9 @@ function renderChrome() {
    실행 버튼이 아니라 내비게이션이므로 ①~⑤ 주문 버튼 금지 제약과 무관. */
 function nextButtonLabel() {
   if (S.step >= 8) return "처음으로 →";
+  // ⑦ 종착 분기(계약 §9): 모의 체결이 있어야 실제 주문 화면(⑧ 재현)으로 —
+  // 보류 사용자는 주문 화면으로 유도하지 않는다.
+  if (S.step === 7) return S.settlement ? "실제 주문 화면으로 →" : "처음으로 →";
   if (S.step === 5 && orderPlanFromIntent()) return "주문 화면으로 →";
   return "다음 단계 →";
 }
@@ -599,6 +604,7 @@ async function doSettle() {
   });
   if (r.body && r.body.ok) {
     S.settlement = r.body.settlement;
+    S.settledIntent = S.intent; // 체결 시점 의향 스냅샷 — ⑦ 표기는 이후 의향 변경과 분리
     el("sheet-backdrop").hidden = true;
     renderStep6();
     renderStep7();
@@ -640,7 +646,7 @@ function renderStep7() {
   el("s7-contrast").innerHTML = `<div class="kcard quote">
       <div class="tag fact">내가 적은 투자 일지</div>
       <div>${S.diaryText ? "“" + esc(S.diaryText) + "”" : "아직 일지를 적지 않았어요 — ⑤에서 적을 수 있어요."}</div>
-      <div class="meta"><span>선택: ${esc(S.intent || "선택 없음")}</span></div>
+      <div class="meta"><span>선택: ${esc((S.settlement ? (S.settledIntent || S.intent) : S.intent) || "선택 없음")}</span></div>
     </div>` +
     (plan ? `<div class="kcard">
       <div class="tag fact">계획과 나란히 보기</div>
@@ -746,9 +752,14 @@ function toggleSafemode(onFlag) {
 /* ── 이벤트 배선 ──────────────────────────────────────── */
 function wireEvents() {
   el("btn-start").addEventListener("click", () => goStep(1));
-  el("btn-later").addEventListener("click", () => goStep(0));
+  // 레이어는 투자 행동을 막지 않는다 — 브리핑 스킵은 ⑧ 주문 화면(재현)으로 직행(계약 §9)
+  el("btn-skip-briefing").addEventListener("click", () => goStep(8));
   el("btn-prev").addEventListener("click", () => goStep(S.step - 1));
-  el("btn-next").addEventListener("click", () => goStep(S.step >= 8 ? 0 : S.step + 1));
+  el("btn-next").addEventListener("click", () => {
+    if (S.step >= 8) return goStep(0);
+    if (S.step === 7 && !S.settlement) return goStep(0); // 보류 완주 → 처음으로(⑧ 미유도)
+    goStep(S.step + 1);
+  });
   document.querySelectorAll("#progress .pg").forEach((b) => {
     b.addEventListener("click", () => goStep(Number(b.dataset.goto)));
   });

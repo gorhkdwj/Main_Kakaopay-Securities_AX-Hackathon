@@ -199,3 +199,15 @@ def test_safemode_screen_has_no_order_ui():
     assert "체결하기" not in sec
     assert "비상 절차" in sec
     assert 'id="btn-safe-exit"' in sec
+
+
+def test_home_skip_button_replaces_later():
+    """홈(S0) 대안 버튼 = "브리핑 없이 바로 주문할게요"(→⑧) — 계약 §9.
+
+    레이어는 투자 행동을 막지 않는다(사용자 결정 2026-07-16) — 소극적
+    "나중에 볼게요"는 존재하지 않아야 한다.
+    """
+    html = read_static("index.html")
+    sec0 = section_slice(html, "step-0")
+    assert "브리핑 없이 바로 주문할게요" in sec0
+    assert "나중에 볼게요" not in html
