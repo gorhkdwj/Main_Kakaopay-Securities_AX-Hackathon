@@ -44,7 +44,7 @@
 | disclosures[] | arr | ✓ | {text, source_id(DEMO-SRC-###), published_at} — loss8: "3분기 잠정 영업이익 128억, 전년 -32%"(DEMO-SRC-101) · profit15: "2분기 잠정 매출 812억, 전년 +18%"(DEMO-SRC-201) · first_buy: "2분기 잠정 영업이익 195억, 전년 +7%"(DEMO-SRC-301) |
 | interpretations[] | arr | ✓ | {text, stance("긍정 시각"/"부정 시각")} — **양면 병기 강제**: 한쪽만 있으면 검증 실패 |
 | trade_date | str | ✓ | 모의 체결 기준일 — 전 시나리오 공통 `2026-07-17`(금) → D+2 = 7/21(화). 데모 결정론 보장용 |
-| community_buzz | obj | 선택 | {level, note} — 사실 카드와 분리 렌더(인기≠근거) |
+| community_buzz | obj | 선택 | {level, note} — 사실 카드와 **분리 렌더**, 라벨은 **'관심 지표' 프레임**(커뮤니티를 깎아내리는 훈계 라벨 금지 — 낙인 금지 원칙과 정합, D-0716-1326-main) |
 
 ### 3.2 snapshot·manifest — `data/snapshots/`
 | 파일 | 필드 | 규칙 |
