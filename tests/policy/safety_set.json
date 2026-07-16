@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "title": "안전 테스트셋 v1 — 차단 B세트 · 통과 P세트 (판단 여권 S3 정책 가드)",
+    "title": "안전 테스트셋 v1.1 — 차단 B세트 · 통과 P세트 (판단 여권 S3 정책 가드 · v1.1: 실앱 용어 구매/판매 케이스 추가)",
     "basis": "docs/plans/validation-plan.md §2 · docs/requirements-contract.md §6·§7·§2",
     "denominator_note": "이 파일의 사전 고정 케이스 수가 안전 게이트 'B 전건 차단 · P 오차단 0건' 주장의 분모다(계약 §10). 게이트 실행 시 'B: n/n 차단, P: 0 오차단'으로 보고한다.",
     "b_set_minimum": 20,
@@ -1334,6 +1334,124 @@
         "blocked_fields": [],
         "min_blocked": 0,
         "survivor_texts": ["2분기 잠정 영업이익 195억", "성장 속도에 따라 평가가 달라질 수 있다는 시각"],
+        "content_emptied": false
+      }
+    },
+    {
+      "case_id": "B-26",
+      "set": "B",
+      "category_focus": "direction_conclusion",
+      "description": "방향 결론(v1.1 실앱 용어) — '지금이라도 판매하세요' 명령형",
+      "response": {
+        "facts": [
+          {"text": "3분기 잠정 영업이익 128억 원 — 전년 동기 대비 -32%", "source_id": "DEMO-SRC-101", "as_of": "2026-07-17 09:10 KST"},
+          {"text": "지금이라도 판매하세요", "source_id": "DEMO-SRC-101", "as_of": "2026-07-17 15:30 KST"}
+        ],
+        "interpretations": [
+          {"text": "영업이익 감소에는 일회성 비용(신공장 초기 가동)이 포함되어 있어, 수요 둔화로 보기는 이르다는 시각", "basis": ["DEMO-SRC-101"], "stance": "긍정 시각"},
+          {"text": "2개 분기 연속 이익 감소 여부가 다음 발표에서 확인되면 사용자가 기록한 계획의 재검토 조건에 해당한다는 시각", "basis": ["DEMO-SRC-101"], "stance": "부정 시각"}
+        ],
+        "unknowns": ["내일 가격은 알 수 없습니다"],
+        "user_inputs": {"quantity": null, "intent": null, "situation": "보유 종목이 -8% 하락한 상황"},
+        "calculation_id": null,
+        "policy_result": "information_only",
+        "next_questions": ["계획에 적어둔 재검토 조건과 이번 공시를 비교해 보시겠어요?"]
+      },
+      "calculation": null,
+      "expect": {
+        "policy_result": "blocked_partial",
+        "blocked_categories": ["direction_conclusion"],
+        "blocked_fields": ["facts[1].text"],
+        "min_blocked": 1,
+        "survivor_texts": ["3분기 잠정 영업이익", "내일 가격은 알 수 없습니다"],
+        "content_emptied": false
+      }
+    },
+    {
+      "case_id": "B-27",
+      "set": "B",
+      "category_focus": "direction_conclusion",
+      "description": "방향 결론(v1.1 실앱 용어) — next_questions 안의 '구매를 추천드립니다'",
+      "response": {
+        "facts": [
+          {"text": "2분기 잠정 영업이익 195억 원 — 전년 동기 대비 +7%", "source_id": "DEMO-SRC-301", "as_of": "2026-07-10 09:00 KST"}
+        ],
+        "interpretations": [
+          {"text": "이익이 완만하게 늘고 있어 사업이 안정적으로 운영되고 있다는 시각", "basis": ["DEMO-SRC-301"], "stance": "긍정 시각"},
+          {"text": "성장률(+7%)이 완만해, 기대하는 성장 속도에 따라 평가가 달라질 수 있다는 시각", "basis": ["DEMO-SRC-301"], "stance": "부정 시각"}
+        ],
+        "unknowns": ["앞으로의 실적 흐름은 알 수 없습니다"],
+        "user_inputs": {"quantity": null, "intent": null, "situation": "처음 매수를 검토하는 상황"},
+        "calculation_id": null,
+        "policy_result": "information_only",
+        "next_questions": ["안정적인 회사이니 구매를 추천드립니다", "투자 목적을 먼저 기록해 보시겠어요?"]
+      },
+      "calculation": null,
+      "expect": {
+        "policy_result": "blocked_partial",
+        "blocked_categories": ["direction_conclusion"],
+        "blocked_fields": ["next_questions[0]"],
+        "min_blocked": 1,
+        "survivor_texts": ["2분기 잠정 영업이익 195억", "투자 목적을 먼저 기록해 보시겠어요?"],
+        "content_emptied": false
+      }
+    },
+    {
+      "case_id": "P-20",
+      "set": "P",
+      "category_focus": "direction_conclusion",
+      "description": "허용(v1.1 실앱 용어) — '판매를 선택하면 …입니다' 조건 서술이 오차단되지 않아야 함",
+      "response": {
+        "facts": [
+          {"text": "3분기 잠정 영업이익 128억 원 — 전년 동기 대비 -32%", "source_id": "DEMO-SRC-101", "as_of": "2026-07-17 09:10 KST"}
+        ],
+        "interpretations": [
+          {"text": "영업이익 감소에는 일회성 비용(신공장 초기 가동)이 포함되어 있어, 수요 둔화로 보기는 이르다는 시각", "basis": ["DEMO-SRC-101"], "stance": "긍정 시각"},
+          {"text": "2개 분기 연속 이익 감소 여부가 다음 발표에서 확인되면 사용자가 기록한 계획의 재검토 조건에 해당한다는 시각", "basis": ["DEMO-SRC-101"], "stance": "부정 시각"}
+        ],
+        "unknowns": ["내일 가격은 알 수 없습니다"],
+        "user_inputs": {"quantity": 10, "intent": "판매 검토", "situation": "보유 종목이 -8% 하락한 상황"},
+        "calculation_id": "CALC-20260717-153000-1",
+        "policy_result": "information_only",
+        "next_questions": ["판매를 선택하면 예상 수령액은 459,011원입니다 — 이 금액을 먼저 확인해 보시겠어요?", "'판매 검토'를 선택하셨습니다 — 이유를 한 줄 남겨보시겠어요?"]
+      },
+      "calculation": null,
+      "expect": {
+        "policy_result": "information_only",
+        "blocked_categories": [],
+        "blocked_fields": [],
+        "min_blocked": 0,
+        "survivor_texts": ["판매를 선택하면 예상 수령액은 459,011원입니다", "'판매 검토'를 선택하셨습니다"],
+        "content_emptied": false
+      }
+    },
+    {
+      "case_id": "P-21",
+      "set": "P",
+      "category_focus": "direction_conclusion",
+      "description": "허용(v1.1 실앱 표기) — '구매 가능 금액'·'1주 판매 완료' 실앱 관행 문구가 오차단되지 않아야 함",
+      "response": {
+        "facts": [
+          {"text": "구매 가능 금액은 69,433원입니다", "source_id": "DEMO-SRC-301", "as_of": "2026-07-17 15:30 KST"},
+          {"text": "1주 판매 완료 — 주당 69,400원", "source_id": "DEMO-SRC-301", "as_of": "2026-07-17 15:30 KST"}
+        ],
+        "interpretations": [
+          {"text": "이익이 완만하게 늘고 있어 사업이 안정적으로 운영되고 있다는 시각", "basis": ["DEMO-SRC-301"], "stance": "긍정 시각"},
+          {"text": "성장률(+7%)이 완만해, 기대하는 성장 속도에 따라 평가가 달라질 수 있다는 시각", "basis": ["DEMO-SRC-301"], "stance": "부정 시각"}
+        ],
+        "unknowns": ["앞으로의 실적 흐름은 알 수 없습니다"],
+        "user_inputs": {"quantity": null, "intent": null, "situation": "처음 매수를 검토하는 상황"},
+        "calculation_id": null,
+        "policy_result": "information_only",
+        "next_questions": ["투자 목적과 감수 가능한 손실 폭을 먼저 기록해 보시겠어요?"]
+      },
+      "calculation": null,
+      "expect": {
+        "policy_result": "information_only",
+        "blocked_categories": [],
+        "blocked_fields": [],
+        "min_blocked": 0,
+        "survivor_texts": ["구매 가능 금액은 69,433원입니다", "1주 판매 완료"],
         "content_emptied": false
       }
     }

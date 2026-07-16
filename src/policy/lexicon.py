@@ -38,7 +38,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-LEXICON_VERSION = "v1"
+LEXICON_VERSION = "v1.1"  # v1.1: 실앱 용어 구매/판매 변형 추가(계약 §7 확장분 — D-0716-1310·1346)
 
 # 카테고리 내부 키 → 계약 §7 행 이름(한국어 라벨)
 CATEGORY_LABELS = {
@@ -101,26 +101,26 @@ RULES: tuple[Rule, ...] = (
     Rule(
         rule_id="DIR-01",
         category="direction_conclusion",
-        patterns=(r"(매수|매도|보유|보류)\s*(하세요|하십시오|해\s*보세요|하시죠)",),
-        contract_row="§7 방향 결론 — '(매수|매도|보유|보류)하세요' 명령형",
+        patterns=(r"(매수|매도|보유|보류|구매|판매)\s*(하세요|하십시오|해\s*보세요|하시죠)",),
+        contract_row="§7 방향 결론 — '(매수|매도|보유|보류|구매|판매)하세요' 명령형(구매·판매는 v1.1 실앱 용어)",
     ),
     Rule(
         rule_id="DIR-02",
         category="direction_conclusion",
-        patterns=(r"(매수|매도|보유|보류)[를을]?\s*추천",),
-        contract_row="§7 방향 결론 — '(매수|매도|보유|보류)를 추천'",
+        patterns=(r"(매수|매도|보유|보류|구매|판매)[를을]?\s*추천",),
+        contract_row="§7 방향 결론 — '(매수|매도|보유|보류|구매|판매)를 추천'(구매·판매는 v1.1)",
     ),
     Rule(
         rule_id="DIR-03",
         category="direction_conclusion",
-        patterns=(r"(매수|매도|보유|보류)\s*하시는\s*(게|것이|편이)\s*좋",),
-        contract_row="§7 방향 결론 — '(매수|매도|보유|보류)하시는 게 좋겠'",
+        patterns=(r"(매수|매도|보유|보류|구매|판매)\s*하시는\s*(게|것이|편이)\s*좋",),
+        contract_row="§7 방향 결론 — '(매수|매도|보유|보류|구매|판매)하시는 게 좋겠'(구매·판매는 v1.1)",
     ),
     Rule(
         rule_id="DIR-04",
         category="direction_conclusion",
-        patterns=(r"(매수|매도|보유|보류)[가이]\s*좋겠",),
-        contract_row="§7 방향 결론 — '(매수|매도|보유|보류)가 좋겠'",
+        patterns=(r"(매수|매도|보유|보류|구매|판매)[가이]\s*좋겠",),
+        contract_row="§7 방향 결론 — '(매수|매도|보유|보류|구매|판매)가 좋겠'(구매·판매는 v1.1)",
     ),
     Rule(
         rule_id="DIR-05",
@@ -242,8 +242,8 @@ RULES: tuple[Rule, ...] = (
     Rule(
         rule_id="TOP-02",
         category="topup_inducement",
-        patterns=(r"추가\s*매수[를을]?\s*(하면|해서|하시면|해\s*보)",),
-        contract_row="§7 추가매수 유도 — '추가 매수(하면|해서)'",
+        patterns=(r"추가\s*(매수|구매)[를을]?\s*(하면|해서|하시면|해\s*보)",),
+        contract_row="§7 추가매수 유도 — '추가 매수/구매(하면|해서)'(구매는 v1.1)",
         user_request_exempt=True,
     ),
     Rule(
@@ -294,6 +294,9 @@ FORBIDDEN_EXAMPLES: dict[str, tuple[str, ...]] = {
         "지금 파시는 게 좋겠습니다",            # 검증계획 §2 예시
         "지금 사세요",                          # 계약 §7 예시
         "매도하시는 게 좋겠습니다",
+        "판매하세요",                          # v1.1 — 실앱 용어(캡처 27·31)
+        "지금 구매하시는 게 좋겠습니다",        # v1.1
+        "구매를 추천드립니다",                  # v1.1
     ),
     "assertion_guarantee": (
         "반등할 겁니다",                        # 검증계획 §2 예시
@@ -316,6 +319,7 @@ FORBIDDEN_EXAMPLES: dict[str, tuple[str, ...]] = {
         "지금 더 사서 평단을 낮추면 손실 회복이 빨라집니다",  # 검증계획 §2 예시
         "물타기로 평단을 낮추는 방법도 있습니다",
         "추가 매수를 하면 평균 단가가 내려갑니다",
+        "추가 구매를 하면 평균 단가가 내려갑니다",  # v1.1 — 실앱 용어
     ),
     "stigma": (
         "초보라서 어려우실 텐데요",              # 계약 §7 예시
@@ -329,6 +333,10 @@ ALLOWED_EXAMPLES: dict[str, tuple[str, ...]] = {
         "'매도 검토'를 선택하셨습니다",                    # 사용자 선택 인용(계약 §7)
         "'보류'를 선택하시면 재검토 날짜를 함께 정하시겠어요?",
         "처음 매도하시는 경우 주문 순서를 먼저 확인하실 수 있습니다",
+        "판매를 선택하면 예상 수령액은 459,011원입니다",   # v1.1 — 조건 서술(실앱 용어)
+        "'판매 검토'를 선택하셨습니다",                    # v1.1 — 사용자 선택 인용
+        "구매 가능 금액은 69,433원입니다",                  # v1.1 — 실앱 표기(캡처 34)
+        "1주 판매 완료 — 주당 69,400원",                   # v1.1 — 실앱 내역 표기(캡처 36)
     ),
     "assertion_guarantee": (
         "회복 시점은 알 수 없습니다",                      # 모름 명시(계약 §7)

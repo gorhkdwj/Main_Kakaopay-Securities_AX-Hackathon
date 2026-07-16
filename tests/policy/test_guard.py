@@ -353,7 +353,7 @@ class TestCounters:
         assert len(sanitized["interpretations"]) == 1
         assert "one_sided_interpretation" in warning_codes(record)
         assert sanitized["policy_result"] == "blocked_partial"
-        assert record["lexicon_version"] == "v1"
+        assert record["lexicon_version"] == "v1.1"  # v1.1: 구매/판매 확장(계약 §7 버전 관리)
 
     def test_clean_response_zero_counters(self):
         sanitized, record = check_response(make_response())

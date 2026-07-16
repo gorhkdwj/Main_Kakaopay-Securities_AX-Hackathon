@@ -31,7 +31,7 @@ def _allowed_params():
 
 class TestVersionAndStructure:
     def test_version_is_v1(self):
-        assert LEXICON_VERSION == "v1"
+        assert LEXICON_VERSION == "v1.1"  # v1.1: 구매/판매 실앱 용어 확장(계약 §7 — 버전 관리 규정)
 
     def test_six_categories_match_contract(self):
         """계약 §7 표의 6개 카테고리가 전부 규칙으로 구현되어 있어야 한다."""
