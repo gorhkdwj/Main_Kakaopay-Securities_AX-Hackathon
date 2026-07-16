@@ -9,3 +9,14 @@ __pycache__/
 .env
 .env.*
 !.env.example
+secrets/
+*.key
+*.pem
+
+# 실행 결과·임시 산출물
+out/
+
+# OS·에디터·브라우저 자동화 산출물
+.DS_Store
+Thumbs.db
+.playwright-mcp/
