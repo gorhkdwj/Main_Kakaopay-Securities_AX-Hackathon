@@ -38,10 +38,11 @@ def test_i01_loss8_full_api_sequence(client, records_dir):
     assert "종가 46,000원" in b["facts"][1]["text"]
     assert "3.2배" in b["facts"][1]["text"]
 
-    # 해석 양면 + 모름 최소 1건(모름은 구체적 — 언제 확인되는지 병기)
+    # 해석 양면 + 모름 최소 1건(모름은 구체적 — 언제 확인되는지 병기.
+    # 자명한 일반론은 금지 — 사용자 피드백 2026-07-16, D-0716-1510 반영)
     assert {i["stance"] for i in b["interpretations"]} == {"긍정 시각", "부정 시각"}
     assert len(b["unknowns"]) >= 1
-    assert any("누구도 알 수 없습니다" in u for u in b["unknowns"])
+    assert not any("누구도 알 수 없습니다" in u for u in b["unknowns"])
     assert any("다음 실적 발표에서 확인됩니다" in u for u in b["unknowns"])
 
     # next_questions — plan의 재검토 조건 대조 질문

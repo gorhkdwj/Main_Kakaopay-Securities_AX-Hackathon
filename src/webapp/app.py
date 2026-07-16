@@ -83,20 +83,21 @@ PRICE_FACT_SOURCE_BY_NAME = {
     "다온소재": "DEMO-SRC-302",
 }
 
-#: unknowns — 모름·중립 표현 원칙(스펙 §3: 구체적 모름 + 시장 주어)
-COMMON_UNKNOWN = "내일 가격은 누구도 알 수 없습니다."
+#: unknowns — 모름·중립 표현 원칙(스펙 §3: 구체적 모름 + 시장 주어).
+#: 자명한 일반론("내일 가격은 알 수 없다" 단독)은 정보가치가 없어 금지
+#: (사용자 피드백 2026-07-16 — 모름은 '무엇이 언제 어디서 확인되는가'로 쓴다).
 SCENARIO_UNKNOWNS = {
     "loss8": [
-        COMMON_UNKNOWN,
         "2개 분기 연속 악화 여부는 다음 실적 발표에서 확인됩니다.",
+        "공시에 없는 회사 내부 사정(비용·수주 계획)은 공개 자료로 알 수 없습니다.",
     ],
     "profit15": [
-        COMMON_UNKNOWN,
         "신제품 매출이 이어질지는 다음 분기 실적 발표에서 확인됩니다.",
+        "오늘 상승분에서 실적 요인과 수급 요인은 구분해 확인할 수 없습니다.",
     ],
     "first_buy": [
-        COMMON_UNKNOWN,
         "이익 증가가 이어질지는 다음 실적 발표에서 확인됩니다.",
+        "경쟁사와 견준 성장 속도는 이 화면의 데이터만으로는 비교할 수 없습니다.",
     ],
 }
 
@@ -225,7 +226,7 @@ def compose_briefing(fx: dict) -> tuple[dict, dict]:
         unavailable.append("interpretations")
 
     # ── unknowns · next_questions ───────────────────────────────────────
-    unknowns = list(SCENARIO_UNKNOWNS.get(scenario_id, [COMMON_UNKNOWN]))
+    unknowns = list(SCENARIO_UNKNOWNS.get(scenario_id, []))
 
     plan = fx.get("plan")
     if isinstance(plan, dict) and plan.get("review_condition"):
