@@ -147,10 +147,18 @@ function renderChrome() {
   });
   el("progress-label").textContent = STEP_NAMES[S.step];
   el("wizard-nav").style.display = S.step === 0 ? "none" : "flex";
-  el("btn-next").textContent = S.step >= 8 ? "처음으로 →" : "다음 단계 →";
+  el("btn-next").textContent = nextButtonLabel();
   const expanded = document.body.classList.contains("expanded");
   const safemode = document.body.classList.contains("safemode");
   el("mock-order-bar").hidden = safemode || !(S.step === 6 || expanded);
+}
+/* ⑤에서 주문 의향(판매·구매 검토)을 고른 상태의 "다음"은 주문 화면(⑥) 진입이다 —
+   실서비스에서 기존 주문 모듈로 넘어가는 핸드오프 이음새를 라벨로 보여준다(스펙 §0·계약 §9).
+   실행 버튼이 아니라 내비게이션이므로 ①~⑤ 주문 버튼 금지 제약과 무관. */
+function nextButtonLabel() {
+  if (S.step >= 8) return "처음으로 →";
+  if (S.step === 5 && orderPlanFromIntent()) return "주문 화면으로 →";
+  return "다음 단계 →";
 }
 
 /* ── 렌더: 전체 ───────────────────────────────────────── */
@@ -709,6 +717,7 @@ function wireEvents() {
         x.classList.toggle("sel", x === btn));
       renderStep6();
       renderStep7();
+      renderChrome(); // ⑤에 머문 상태에서 진행 버튼 라벨 즉시 갱신
     });
   });
 
