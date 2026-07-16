@@ -38,21 +38,28 @@ TOP_KEYS = {
     "scenario_id", "as_of", "is_synthetic", "instrument", "price", "volume",
     "holding", "cash", "portfolio_total_value", "plan", "disclosures",
     "interpretations", "trade_date", "community_buzz",
+    "past_records", "discovery_context",
 }
-REQUIRED_KEYS = TOP_KEYS - {"community_buzz"}  # community_buzz만 선택(계약 §3.1)
+# community_buzz·past_records·discovery_context는 선택(계약 §3.1)
+REQUIRED_KEYS = TOP_KEYS - {"community_buzz", "past_records", "discovery_context"}
+PAST_RECORD_KEYS = {"recorded_at", "side", "qty", "reason_text"}
+DISCOVERY_KEYS = {"path", "theme", "criteria", "entered_at"}
 PLAN_KEYS = {"horizon", "max_loss_pct", "review_condition", "recorded_at"}
 
 # 계약 §5.2 / §5.2-b / §5.2-c 의 골든값 전제 — 여기서 어긋나면 골든값 표 전체가 무효
 GOLDEN_PREMISES = {
     "loss8": dict(close=46000, prev_close=50000, change_pct=-8.0, qty=30,
                   avg_price=50000, total=4_900_000, cash=0,
-                  trade_date="2026-07-17", plan_is_null=False),
+                  trade_date="2026-07-17", plan_is_null=False,
+                  past_records_count=1, has_discovery=False),
     "profit15": dict(close=46000, prev_close=44000, change_pct=4.5, qty=20,
                      avg_price=40000, total=4_900_000, cash=0,
-                     trade_date="2026-07-17", plan_is_null=False),
+                     trade_date="2026-07-17", plan_is_null=False,
+                     past_records_count=1, has_discovery=False),
     "first_buy": dict(close=46000, prev_close=45500, change_pct=1.1, qty=0,
                       avg_price=None, total=1_000_000, cash=1_000_000,
-                      trade_date="2026-07-17", plan_is_null=True),
+                      trade_date="2026-07-17", plan_is_null=True,
+                      past_records_count=0, has_discovery=True),
 }
 
 
@@ -176,6 +183,37 @@ def validate_fixture(path: Path) -> list[str]:
                                  and isinstance(buzz.get("note"), str)):
         errors.append("community_buzz는 {level, note} 형식(선택 필드)")
 
+    # 지난 투자 일지(리마인드 원천 — 계약 §3.1, D-0716-1352)
+    past = data.get("past_records")
+    if past is not None:
+        if not isinstance(past, list):
+            errors.append("past_records는 배열(선택 필드)")
+        else:
+            for i, rec in enumerate(past):
+                if not (isinstance(rec, dict) and PAST_RECORD_KEYS <= set(rec.keys())):
+                    errors.append(f"past_records[{i}] 필드 누락(필요: {sorted(PAST_RECORD_KEYS)})")
+                    continue
+                if not (isinstance(rec["recorded_at"], str) and DATE_RE.match(rec["recorded_at"])):
+                    errors.append(f"past_records[{i}].recorded_at 형식 오류(YYYY-MM-DD)")
+                if rec["side"] not in ("buy", "sell"):
+                    errors.append(f"past_records[{i}].side 오류: {rec['side']!r} (buy·sell)")
+                if not is_pos_int(rec["qty"]):
+                    errors.append(f"past_records[{i}].qty는 양의 정수")
+                if not (isinstance(rec["reason_text"], str) and rec["reason_text"].strip()):
+                    errors.append(f"past_records[{i}].reason_text는 비어 있지 않은 문자열")
+
+    # 진입 맥락(자동완성 초안 원천 — 계약 §3.1, D-0716-1346)
+    disc = data.get("discovery_context")
+    if disc is not None:
+        if not (isinstance(disc, dict) and DISCOVERY_KEYS <= set(disc.keys())):
+            errors.append(f"discovery_context 필드 누락(필요: {sorted(DISCOVERY_KEYS)})")
+        else:
+            for key in ("path", "theme", "criteria"):
+                if not (isinstance(disc[key], str) and disc[key].strip()):
+                    errors.append(f"discovery_context.{key}는 비어 있지 않은 문자열")
+            if not (isinstance(disc["entered_at"], str) and AS_OF_RE.match(disc["entered_at"])):
+                errors.append("discovery_context.entered_at 형식 오류('YYYY-MM-DD HH:mm KST')")
+
     premise = GOLDEN_PREMISES.get(sid)
     if premise is None:
         errors.append(f"알 수 없는 scenario_id: {sid} (계약 §5.2에 골든 전제 없음 — 계약을 먼저 확장할 것)")
@@ -190,6 +228,8 @@ def validate_fixture(path: Path) -> list[str]:
             ("cash", data.get("cash"), premise["cash"]),
             ("trade_date", td, premise["trade_date"]),
             ("plan is null", plan is None, premise["plan_is_null"]),
+            ("past_records 건수", len(data.get("past_records") or []), premise["past_records_count"]),
+            ("discovery_context 존재", data.get("discovery_context") is not None, premise["has_discovery"]),
         ]
         for label, actual, expected in checks:
             if actual != expected:

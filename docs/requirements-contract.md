@@ -45,6 +45,8 @@
 | interpretations[] | arr | ✓ | {text, stance("긍정 시각"/"부정 시각")} — **양면 병기 강제**: 한쪽만 있으면 검증 실패 |
 | trade_date | str | ✓ | 모의 체결 기준일 — 전 시나리오 공통 `2026-07-17`(금) → D+2 = 7/21(화). 데모 결정론 보장용 |
 | community_buzz | obj | 선택 | {level, note} — 사실 카드와 **분리 렌더**, 라벨은 **'관심 지표' 프레임**(커뮤니티를 깎아내리는 훈계 라벨 금지 — 낙인 금지 원칙과 정합, D-0716-1326-main) |
+| past_records[] | arr | 선택 | **지난 투자 일지**(①화면 리마인드 원천 — D-0716-1352) {recorded_at(YYYY-MM-DD), side("buy"·"sell"), qty(int≥1), reason_text(비어 있지 않은 str — 사용자 자신의 글, guard 검사 대상 아님·인용 표시로 렌더)} — loss8·profit15: 매수 당시 일지 1건 시드 · first_buy: 필드 없음(첫 거래 정합) |
+| discovery_context | obj | 선택 | **진입 맥락**(⑤화면 투자 일지 자동완성 초안 원천 — D-0716-1346) {path, theme, criteria(각 비어 있지 않은 str), entered_at(YYYY-MM-DD HH:mm KST)} — first_buy만: "탐색하기 > 기업가치로 탐색하기" > "꾸준히 매출 좋은 주식" |
 
 ### 3.2 snapshot·manifest — `data/snapshots/`
 | 파일 | 필드 | 규칙 |
