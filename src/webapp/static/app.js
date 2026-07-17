@@ -133,7 +133,8 @@ async function loadScenario(id) {
   renderDemoScenarios();
   await fetchScenarioPreviews();
   renderAll();
-  openIntercept(); // 시연 시작 = "주문 버튼을 누른 순간" — 진입 팝업 자동 제시(계약 §9)
+  // 팝업은 자동으로 열지 않는다 — S0 주문 화면의 구매/판매 클릭이 유일한
+  // 발동 경로(클릭→인터셉트 인과의 재현, D-0718-0210 — 계약 §9)
 }
 function holdingQty() {
   const h = S.data && S.data.meta.holding;
@@ -166,8 +167,8 @@ async function fetchPreview(key, side, qty) {
 /* ── 단계 이동 ────────────────────────────────────────── */
 function goStep(n) {
   S.step = Math.max(0, Math.min(8, n));
-  // S0 진입 = "주문 버튼을 누른 순간"의 재현 — 인터셉트 팝업 자동 제시(계약 §9 상시 인터셉트)
-  if (S.step === 0) openIntercept(); else closeIntercept();
+  // 단계 이동 시 팝업은 항상 닫는다 — 발동은 S0 구매/판매 클릭만(D-0718-0210)
+  closeIntercept();
   if (S.data) {
     // ⑦·⑧은 ⑤ 일지·재검토 입력을 인용하므로 진입 시점 값으로 재렌더(스테일 방지)
     if (S.step === 7) renderStep7();
