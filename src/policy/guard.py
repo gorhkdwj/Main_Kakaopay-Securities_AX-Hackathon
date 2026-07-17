@@ -15,7 +15,9 @@
 실행하는 코드 경로가 존재하지 않는다(정규식 매칭·구조 비교만 수행).
 
 ──────────────────────────────────────────────────────────────────────
-check_response(response, calculation=None) -> (sanitized, record)
+check_response(response, calculation=None, *,
+               allowed_numbers=None, known_source_ids=None)
+    -> (sanitized, record)
 ──────────────────────────────────────────────────────────────────────
 
 입력:
@@ -32,16 +34,31 @@ check_response(response, calculation=None) -> (sanitized, record)
         inputs.quantity → inputs.qty → quantity → qty
         (S2·S5는 이 중 하나로 입력 수량을 노출해야 수량 검사가 작동한다.
          어느 키에도 없으면 검사를 건너뛰고 warnings에 남긴다.)
+    allowed_numbers: facts[].text 숫자 대사(계약 §6 — LLM 산수 금지)의
+        허용 숫자 집합(collect_allowed_numbers()로 fixture·엔진 결과에서
+        추출) 또는 None. None이면 숫자 검사를 건너뛴다(S3 v1 호환).
+        검사 시 NUMBER_CONTEXT_WHITELIST(지표 정의 상수)가 항상 합산된다.
+    known_source_ids: 실재하는 source_id 집합(fixture 공시·시세 카드 출처
+        — 계약 §2 "실재해야 함"의 S5 격상 구현) 또는 None.
+        None이면 실재 검사를 건너뛴다(형식 검사만 — S3 v1 호환).
 
 검사 파이프라인(순서 고정 — 결정론 보장):
     ① facts 구조 검사: source_id 또는 as_of 누락/빈 값 → 해당 fact 차단.
        source_id가 계약 §2 형식(`F-/C-/X-SRC-####` 4자리 또는
        `DEMO-SRC-###` 3자리, SOURCE_ID_RE)과 불일치 → 차단.
+       known_source_ids가 주어지면 형식 통과 후 **실재 검사**(집합 미포함
+       → 차단, rule_id SRC-EXIST — S5 격상: 형식 검사로 갈음하던 v1 한계 해소).
        한 fact가 source_id·as_of를 모두 위반하면 blocked에 2건 기록하고
        카운터를 각각 +1 하되 블록 제거는 1회다.
        (as_of는 존재·비공백 문자열 여부만 검사한다 — 포맷(§11) 검증은
-        S1 fixture 검증 스크립트 소관. source_id의 '대장 실재' 검증은
-        v1에서는 형식 검사로 갈음한다.)
+        S1 fixture 검증 스크립트 소관.)
+    ①-2 facts 숫자 대사(allowed_numbers 제공 시 — 계약 §6 "숫자 포함 시
+       calculation_id 결과 또는 fixture 원천값과 일치"): ①·② 통과 텍스트의
+       모든 숫자 토큰(콤마·소수 허용)을 절대값 Decimal로 정규화해 허용
+       집합과 대조. 집합 밖 숫자 발견 → 해당 fact 차단(rule_id NUM-01,
+       category number_unverified — counters 미집계, §10 3지표 아님).
+       부호는 비교하지 않는다(방향 왜곡은 표현 사전 소관 — 책임 분리).
+       facts[].text만 검사한다(계약 §6의 숫자 규칙 적용 범위).
     ② 금지 표현 검사(lexicon v1): ①을 통과한 facts[].text와
        interpretations[].text, unknowns[], next_questions[] 전수.
        위반 블록만 제거한다. user_inputs는 검사하지 않는다
@@ -78,7 +95,8 @@ check_response(response, calculation=None) -> (sanitized, record)
     {
       "category": str,   # 차단 사유 분류 —
                          #  구조: "no_source" | "asof_missing" |
-                         #        "quantity_mismatch" | "malformed"
+                         #        "quantity_mismatch" | "malformed" |
+                         #        "number_unverified"(S5 — 숫자 대사 실패)
                          #  표현: lexicon 카테고리 키
                          #        ("direction_conclusion", "assertion_guarantee",
                          #         "profit_prediction", "excessive_reassurance",
@@ -91,10 +109,11 @@ check_response(response, calculation=None) -> (sanitized, record)
       "pattern": str,    # 매치된 규칙 — 표현 위반은 정규식 원문
                          #  (복합 규칙은 " & " 결합), 구조 위반은 상수 식별자
                          #  ("required:source_id", "format:source_id",
-                         #   "required:as_of", "quantity_equality", "schema")
+                         #   "exists:source_id", "required:as_of",
+                         #   "quantity_equality", "numbers:allowed_set", "schema")
       "rule_id": str     # 규칙 ID(진단·감사용): lexicon 규칙("DIR-01" 등)
-                         #  또는 구조 검사 ID("SRC-REQ", "SRC-FMT",
-                         #  "ASOF-REQ", "QTY-01", "SCHEMA")
+                         #  또는 구조 검사 ID("SRC-REQ", "SRC-FMT", "SRC-EXIST",
+                         #  "ASOF-REQ", "QTY-01", "NUM-01", "SCHEMA")
     }, ...
   ],
   "counters": {                        # 안전 지표 카운터(계약 §10) —
@@ -102,8 +121,9 @@ check_response(response, calculation=None) -> (sanitized, record)
     "no_source": int,    # source_id 누락·비문자열·형식 불일치 fact 수(fact당 최대 1)
     "forbidden": int,    # 금지 표현 차단 건수(텍스트 블록당 카테고리별 최대 1)
     "asof_missing": int  # as_of 누락·비문자열 fact 수(fact당 최대 1)
-  },                     # quantity_mismatch·malformed는 blocked에만 기록되고
-                         # counters에는 집계하지 않는다(§10의 3개 분모 지표 아님).
+  },                     # quantity_mismatch·malformed·number_unverified는
+                         # blocked에만 기록되고 counters에는 집계하지 않는다
+                         # (§10의 3개 분모 지표 아님).
   "warnings": [                        # 차단이 아닌 주의 신호
     {"code": "one_sided_interpretation",  # 반대 시각 확인 안 됨(④)
      "message": str},
@@ -121,12 +141,22 @@ from __future__ import annotations
 
 import copy
 import re
+from decimal import Decimal, InvalidOperation
 
 from src.policy.lexicon import LEXICON_VERSION, find_violations
 
 # 계약 §2 — source_id 체계: 리서치 근거 `F-/C-/X-SRC-####`(4자리) 또는
 # 데모 가상 출처 `DEMO-SRC-###`(3자리)만 유효.
 SOURCE_ID_RE = re.compile(r"^(?:[FCX]-SRC-\d{4}|DEMO-SRC-\d{3})$")
+
+# 숫자 대사(①-2) — 텍스트에서 숫자 토큰을 뽑는 규칙: 콤마 자릿수 구분·소수 허용.
+# 부호는 토큰에 포함하지 않는다(절대값 비교 — 모듈 docstring의 책임 분리).
+NUM_TOKEN_RE = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?")
+
+# 숫자 대사 상시 허용 집합 — fixture·계산 결과에 없지만 계약이 정의한 지표 상수.
+#   2  : 결제일 D+2(계약 §5)·"2개 분기 연속"(재검토 조건 관용구)
+#   20 : 거래량 배율의 분모 "20일 평균"(계약 §4)
+NUMBER_CONTEXT_WHITELIST = frozenset({Decimal(2), Decimal(20)})
 
 # 계약 §6 — interpretations.stance 허용값(양면 병기 판단 기준).
 VALID_STANCES = ("긍정 시각", "부정 시각")
@@ -169,6 +199,60 @@ def _as_list(value) -> tuple[list, bool]:
     return [], value is None  # None(필드 부재)은 malformed가 아닌 '빈 값' 취급
 
 
+def _to_decimal(token: str) -> "Decimal | None":
+    """숫자 토큰을 절대값 Decimal로 정규화한다(콤마 제거). 실패 시 None."""
+    try:
+        return abs(Decimal(token.replace(",", "")))
+    except InvalidOperation:
+        return None
+
+
+def collect_allowed_numbers(*sources) -> set:
+    """fixture·엔진 결과 등에서 숫자 대사(①-2)의 허용 숫자 집합을 추출한다.
+
+    dict/list는 재귀 순회, int/float 값은 절대값 Decimal로, str 값은
+    NUM_TOKEN_RE 토큰을 전부 추출해 넣는다(공시 텍스트 안 숫자 = fixture
+    원천값 — 인용 허용). bool은 제외. None 소스는 무시.
+    NUMBER_CONTEXT_WHITELIST는 여기서 합치지 않는다 — check_response가
+    검사 시점에 항상 합산한다(호출자가 화이트리스트를 빠뜨릴 수 없게).
+    """
+    allowed: set = set()
+
+    def walk(node) -> None:
+        if isinstance(node, bool):
+            return
+        if isinstance(node, (int, float)):
+            value = _to_decimal(str(node))
+            if value is not None:
+                allowed.add(value)
+        elif isinstance(node, str):
+            for token in NUM_TOKEN_RE.findall(node):
+                value = _to_decimal(token)
+                if value is not None:
+                    allowed.add(value)
+        elif isinstance(node, dict):
+            for child in node.values():
+                walk(child)
+        elif isinstance(node, (list, tuple)):
+            for child in node:
+                walk(child)
+
+    for source in sources:
+        if source is not None:
+            walk(source)
+    return allowed
+
+
+def _unverified_numbers(text: str, allowed: set) -> list:
+    """text의 숫자 토큰 중 allowed 집합에 없는 것들을 원문 그대로 반환한다."""
+    bad: list = []
+    for token in NUM_TOKEN_RE.findall(text):
+        value = _to_decimal(token)
+        if value is not None and value not in allowed:
+            bad.append(token)
+    return bad
+
+
 def _user_requested_topup(user_inputs: dict) -> bool:
     """intent/situation 문자열에서 추가매수 선요청 표현을 감지한다."""
     for key in ("intent", "situation"):
@@ -194,7 +278,9 @@ def _extract_calc_quantity(calculation: dict):
     return None
 
 
-def check_response(response: dict, calculation: dict | None = None) -> tuple[dict, dict]:
+def check_response(response: dict, calculation: dict | None = None, *,
+                   allowed_numbers: "set | None" = None,
+                   known_source_ids: "set | None" = None) -> tuple[dict, dict]:
     """AI 응답 계약 JSON을 렌더링 전에 검사·정화한다.
 
     상세 명세(입력·파이프라인·차단 기록 포맷)는 모듈 docstring 참조.
@@ -202,6 +288,9 @@ def check_response(response: dict, calculation: dict | None = None) -> tuple[dic
     Args:
         response: 계약 §6 형식의 응답 dict. dict가 아니면 TypeError.
         calculation: 엔진 계산 결과 dict(수량 일치 검사용) 또는 None.
+        allowed_numbers: facts 숫자 대사의 허용 집합(collect_allowed_numbers
+            결과) 또는 None(검사 생략 — S3 v1 호환).
+        known_source_ids: 실재 source_id 집합 또는 None(검사 생략).
 
     Returns:
         (sanitized, record):
@@ -212,6 +301,11 @@ def check_response(response: dict, calculation: dict | None = None) -> tuple[dic
         raise TypeError(
             f"response는 계약 §6 형식의 dict여야 합니다: {type(response).__name__}"
         )
+
+    number_check_set = (
+        set(allowed_numbers) | set(NUMBER_CONTEXT_WHITELIST)
+        if allowed_numbers is not None else None
+    )
 
     sanitized = copy.deepcopy(response)
     record: dict = {
@@ -280,6 +374,15 @@ def check_response(response: dict, calculation: dict | None = None) -> tuple[dic
                 "format:source_id", "SRC-FMT"))
             counters["no_source"] += 1
             structural_violation = True
+        elif known_source_ids is not None and source_id not in known_source_ids:
+            # S5 격상(계약 §2 "실재해야 함") — 형식은 맞지만 이 시나리오의
+            # 실재 출처 집합에 없는 ID(LLM이 지어낸 출처)를 차단한다.
+            blocked.append(_blocked_entry(
+                "no_source", f"{field_base}.source_id",
+                f"source_id={source_id!r} 실재하지 않음: {_excerpt_head(text)}",
+                "exists:source_id", "SRC-EXIST"))
+            counters["no_source"] += 1
+            structural_violation = True
 
         as_of = fact.get("as_of")
         if not isinstance(as_of, str) or not as_of.strip():
@@ -293,6 +396,15 @@ def check_response(response: dict, calculation: dict | None = None) -> tuple[dic
             continue  # 구조 위반 fact는 텍스트 검사 없이 차단(블록 제거 1회)
         if scan_text(text, f"{field_base}.text"):
             continue
+        if number_check_set is not None:
+            # ①-2 숫자 대사(계약 §6 — LLM 산수 금지): 허용 집합 밖 숫자 차단
+            bad_numbers = _unverified_numbers(text, number_check_set)
+            if bad_numbers:
+                blocked.append(_blocked_entry(
+                    "number_unverified", f"{field_base}.text",
+                    f"미확인 숫자 {', '.join(bad_numbers)}: {_excerpt_head(text)}",
+                    "numbers:allowed_set", "NUM-01"))
+                continue
         surviving_facts.append(copy.deepcopy(fact))
     sanitized["facts"] = surviving_facts
 
