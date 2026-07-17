@@ -19,7 +19,7 @@ const S = {
   savedRecord: null,
 };
 
-const STEP_NAMES = ["홈", "① 종목·계획", "② 관련 사실", "③ 체크리스트",
+const STEP_NAMES = ["주문 화면(진입)", "① 종목·계획", "② 관련 사실", "③ 체크리스트",
   "④ 시나리오 비교", "⑤ 검토 의향", "⑥ 모의 주문", "⑦ 회고", "⑧ 주문 화면(재현)"];
 
 const INTENTS = {
@@ -133,6 +133,7 @@ async function loadScenario(id) {
   renderDemoScenarios();
   await fetchScenarioPreviews();
   renderAll();
+  openIntercept(); // 시연 시작 = "주문 버튼을 누른 순간" — 진입 팝업 자동 제시(계약 §9)
 }
 function holdingQty() {
   const h = S.data && S.data.meta.holding;
@@ -165,9 +166,13 @@ async function fetchPreview(key, side, qty) {
 /* ── 단계 이동 ────────────────────────────────────────── */
 function goStep(n) {
   S.step = Math.max(0, Math.min(8, n));
+  // S0 진입 = "주문 버튼을 누른 순간"의 재현 — 인터셉트 팝업 자동 제시(계약 §9 상시 인터셉트)
+  if (S.step === 0) openIntercept(); else closeIntercept();
   renderChrome();
   window.scrollTo({ top: 0 });
 }
+function openIntercept() { el("intercept-backdrop").hidden = false; }
+function closeIntercept() { el("intercept-backdrop").hidden = true; }
 function renderChrome() {
   document.querySelectorAll(".step-panel").forEach((p) => {
     p.classList.toggle("active", Number(p.dataset.step) === S.step);
@@ -182,8 +187,9 @@ function renderChrome() {
   el("btn-next").textContent = nextButtonLabel();
   const expanded = document.body.classList.contains("expanded");
   const safemode = document.body.classList.contains("safemode");
-  // 모의 고정 바는 주문·체결 화면(⑥·⑧ 재현)에 상시 — 계약 §9 모의 표시
-  el("mock-order-bar").hidden = safemode || !(S.step === 6 || S.step === 8 || expanded);
+  // 모의 고정 바는 주문·체결 화면(S0·⑥·⑧)에 상시 — 계약 §9 모의 표시
+  el("mock-order-bar").hidden =
+    safemode || !(S.step === 0 || S.step === 6 || S.step === 8 || expanded);
 }
 /* ⑤에서 주문 의향(판매·구매 검토)을 고른 상태의 "다음"은 주문 화면(⑥) 진입이다 —
    실서비스에서 기존 주문 모듈로 넘어가는 핸드오프 이음새를 라벨로 보여준다(스펙 §0·계약 §9).
@@ -212,8 +218,24 @@ function renderAll() {
   renderChrome();
 }
 
-/* S0 · 보유 홈 */
+/* 주문 화면 재현 공용(S0 진입·⑧ 종착 — 계약 §9): 표시만.
+   side 강조 없음 — 구매/판매 병렬·색 구분만(전 시나리오 공통, D-0717-2121). */
+function renderOrderReplica(prefix) {
+  const m = S.data.meta;
+  const name = m.instrument ? m.instrument.name : "";
+  el(prefix + "-header").innerHTML = `<div class="price-head">
+    <div><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span>
+      <span class="mk">${esc(m.market_label)}</span></div>
+    <div><span class="pr">${num(m.price.close)}</span>원 ${pctChange(m.price.change_pct)}</div>
+  </div>`;
+  el(prefix + "-price").textContent = won(m.price.close);
+  const st = S.settlement;
+  el(prefix + "-qty").textContent = st ? num(st.qty) + "주" : "—";
+}
+
+/* S0 · 주문 화면(재현) + 인터셉트 팝업 내용(보유/계좌 요약·리마인드 — 고불안 강조 신호) */
 function renderStep0() {
+  renderOrderReplica("s0");
   const m = S.data.meta;
   const name = m.instrument ? m.instrument.name : "";
   const titles = {
@@ -221,7 +243,7 @@ function renderStep0() {
     profit15: "보유 종목이 목표에 다가선 날이에요",
     first_buy: "탐색에서 발견한 종목을 살펴보는 중이에요",
   };
-  el("s0-title").textContent = titles[S.scenarioId] || "오늘의 보유 현황이에요";
+  el("s0-title").textContent = titles[S.scenarioId] || "판단이 필요한 순간이에요";
   let html = "";
   if (m.side === "sell") {
     const hold = S.data.hold;
@@ -248,7 +270,16 @@ function renderStep0() {
       <div class="sub-note" style="margin:4px 0 0">현재가 ${won(m.price.close)} · 탐색하기에서 발견한 종목이에요</div>
     </div>`;
   }
-  el("s0-holding").innerHTML = html;
+  el("itc-holding").innerHTML = html;
+
+  const records = S.data.past_records || [];
+  el("itc-remind").innerHTML = records.map((r) => `
+    <div class="kcard quote">
+      <div class="tag fact">지난 투자 일지 — 그때 이렇게 적으셨어요</div>
+      <div>“${esc(r.reason_text)}”</div>
+      <div class="meta"><span>${esc(r.recorded_at)}</span>
+        <span>${r.side === "buy" ? "구매" : "판매"} ${num(r.qty)}주 당시 기록</span></div>
+    </div>`).join("");
 }
 
 /* ① 종목 상세 + 계획 회상 */
@@ -698,23 +729,10 @@ async function saveRecord() {
   }
 }
 
-/* ⑧ 주문 화면(실앱 재현 — 비기능·계약 §9 재현 화면 규칙): 표시만, 주문 버튼 배선 없음 */
+/* ⑧ 주문 화면(실앱 재현·종착 — 계약 §9): 버튼 전부 disabled·배선 없음(재인터셉트 없음) */
 function renderStep8() {
-  const m = S.data.meta;
-  const name = m.instrument ? m.instrument.name : "";
-  const sell = m.side === "sell";
-  el("s8-header").innerHTML = `<div class="price-head">
-    <div><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span>
-      <span class="mk">${esc(m.market_label)}</span></div>
-    <div><span class="pr">${num(m.price.close)}</span>원 ${pctChange(m.price.change_pct)}</div>
-  </div>`;
-  el("s8-tab-buy").classList.toggle("on", !sell);
-  el("s8-tab-sell").classList.toggle("on", sell);
-  el("s8-order-buy").hidden = sell;   // 손실·판매 시나리오에서 구매 CTA 미노출(헌법 §14)
-  el("s8-order-sell").hidden = !sell;
-  el("s8-price").textContent = won(m.price.close);
+  renderOrderReplica("s8");
   const st = S.settlement;
-  el("s8-qty").textContent = st ? num(st.qty) + "주" : "—";
   el("s8-handoff").innerHTML = st ? `<div class="kcard state">
     모의 체결 기록: ${st.side === "sell" ? "판매" : "구매"} ${num(st.qty)}주 · ${won(st.price)} — 실제 거래 아님</div>` : "";
 }
@@ -743,6 +761,7 @@ function toggleSafemode(onFlag) {
   document.body.classList.toggle("safemode", onFlag);
   if (onFlag) {
     el("sheet-backdrop").hidden = true; // 열린 재확인 시트도 주문 유도 — 강제로 닫는다
+    closeIntercept();                   // 진입 팝업도 동일 취급
     renderSafemode();
   }
   renderChrome();
@@ -751,9 +770,12 @@ function toggleSafemode(onFlag) {
 
 /* ── 이벤트 배선 ──────────────────────────────────────── */
 function wireEvents() {
-  el("btn-start").addEventListener("click", () => goStep(1));
-  // 레이어는 투자 행동을 막지 않는다 — 브리핑 스킵은 ⑧ 주문 화면(재현)으로 직행(계약 §9)
-  el("btn-skip-briefing").addEventListener("click", () => goStep(8));
+  el("btn-start").addEventListener("click", () => goStep(1)); // goStep이 팝업을 닫는다
+  // 레이어는 투자 행동을 막지 않는다 — "바로 주문"은 팝업만 닫고 주문 화면(S0 재현)에 머묾(계약 §9)
+  el("btn-skip-briefing").addEventListener("click", closeIntercept);
+  // S0 배경 주문 버튼 = 인터셉트 재현(주문 실행 아님 — 팝업 재호출)
+  el("s0-order-buy").addEventListener("click", openIntercept);
+  el("s0-order-sell").addEventListener("click", openIntercept);
   el("btn-prev").addEventListener("click", () => goStep(S.step - 1));
   el("btn-next").addEventListener("click", () => {
     if (S.step >= 8) return goStep(0);
@@ -815,6 +837,7 @@ function wireEvents() {
   el("demo-safemode").addEventListener("change", (ev) => toggleSafemode(ev.target.checked));
   el("demo-expand").addEventListener("change", (ev) => {
     document.body.classList.toggle("expanded", ev.target.checked);
+    if (ev.target.checked) closeIntercept(); // 전체 펼침 열람을 팝업이 가리지 않게
     renderChrome();
   });
 }

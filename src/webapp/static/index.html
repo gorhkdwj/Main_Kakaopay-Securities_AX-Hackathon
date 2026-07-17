@@ -41,19 +41,41 @@
     <button id="app-error-retry" class="btn ghost" type="button" hidden>다시 시도</button>
   </div>
 
-  <!-- S0 · 보유 홈 -->
-  <section id="step-0" class="step-panel" data-step="0" aria-label="홈 — 보유 현황">
-    <span class="step-chip">홈</span>
-    <h2 id="s0-title">오늘의 보유 현황이에요</h2>
-    <div id="s0-holding"></div>
-    <div class="kcard notice">
-      <div class="tag interp">오늘의 안내</div>
-      지금 판단이 어려우실 수 있어요. 결론을 정해 드리는 대신,
-      <b>확인된 사실과 선택지</b>를 정리해 드릴게요.
+  <!-- S0 · 주문 화면(실앱 재현·진입) + 인터셉트 팝업 — 계약 §9 상시 인터셉트(D-0717-2121) -->
+  <section id="step-0" class="step-panel" data-step="0" aria-label="진입 — 주문 화면(실앱 재현) 위 판단 레이어 팝업">
+    <span class="step-chip">진입 · 주문 화면(재현)</span>
+    <div class="alert-band">실앱 주문 화면 재현(시연용) — 주문은 실행되지 않아요</div>
+    <div id="s0-header"></div>
+    <div class="order-tabs" role="group" aria-label="구매·판매 탭(재현 — 동작 없음)">
+      <button id="s0-tab-buy" class="order-tab" type="button" disabled>구매</button>
+      <button id="s0-tab-sell" class="order-tab" type="button" disabled>판매</button>
     </div>
-    <button id="btn-start" class="btn dark" type="button">판단 전 브리핑 시작하기</button>
-    <button id="btn-skip-briefing" class="btn ghost" type="button">브리핑 없이 바로 주문할게요</button>
+    <div class="kcard" aria-label="주문 입력(재현 — 동작 없음)">
+      <div class="sheet-row"><span>주문 유형</span><span>지정가</span></div>
+      <div class="sheet-row"><span>가격</span><span id="s0-price">—</span></div>
+      <div class="sheet-row"><span>수량</span><span id="s0-qty">—</span></div>
+    </div>
+    <button id="s0-order-buy" class="btn order-fake side-buy" type="button"
+      aria-label="구매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">구매하기</button>
+    <button id="s0-order-sell" class="btn order-fake side-sell" type="button"
+      aria-label="판매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">판매하기</button>
     <p class="footnote">이 데모는 특정 방향을 권하지 않아요 · 모든 주문은 모의(가상)예요.</p>
+
+    <!-- 인터셉트 팝업 — "주문 버튼을 누른 순간"의 재현(상시 제시·바로 주문은 1탭) -->
+    <div id="intercept-backdrop" hidden>
+      <div id="intercept-sheet" role="dialog" aria-modal="true" aria-label="판단 레이어 진입 팝업">
+        <h3 id="s0-title">오늘의 보유 현황이에요</h3>
+        <div id="itc-holding"></div>
+        <div id="itc-remind"></div>
+        <div class="kcard notice">
+          <div class="tag interp">오늘의 안내</div>
+          지금 판단이 어려우실 수 있어요. 결론을 정해 드리는 대신,
+          <b>확인된 사실과 선택지</b>를 정리해 드릴게요.
+        </div>
+        <button id="btn-start" class="btn dark" type="button">판단 전 브리핑 시작하기</button>
+        <button id="btn-skip-briefing" class="btn ghost" type="button">브리핑 없이 바로 주문할게요</button>
+      </div>
+    </div>
   </section>
 
   <!-- ① 종목 상세 + 계획 회상 -->

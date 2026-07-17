@@ -15,6 +15,26 @@
 
 ---
 
+### W-0717-2130-main · 상시 인터셉트 구현 — S0=주문 화면(재현)+진입 팝업, 재현 화면 방향 중립화(전 시나리오)
+**요청**
+- 사용자 설계(플랜 2회 반려 반영 후 승인): ① 기록 기회는 고불안 무관 상시 제공 — 주문 버튼 클릭 시 팝업 갈림길 ② 시연은 처음부터 주문 화면(S0) 위 팝업으로 시작, 브리핑 완주 후 ⑧ 주문 화면 종착 ③ 판매만 강조 금지 — 전 시나리오 구매/판매 병렬·색 구분만(저가 매수도 정당한 선택).
+
+**수행 작업**
+- 커밋1(6ba7be6): 계약 §9(상시 인터셉트 신설·재현 규칙 S0/⑧ 개정·"매도 시 구매 CTA 미노출" 조항 폐기 — §14는 유도 문구·강조 금지로 해석 정련·모의 표시 S0 확장)·스펙 §0(주문 화면이 흐름의 양 끝)/§4/§5·Decisionlog D-0717-2121-main.
+- 커밋2: S0 전면 개편 — 주문 화면 재현 배경(헤더·탭 중립·지정가·수량·구매/판매 버튼) + 인터셉트 팝업(#intercept-backdrop — 보유/계좌 요약·리마인드 카드(past_records 시=고불안 강조)·오늘의 안내·갈림길 2버튼). goStep(0)·시나리오 로드 시 팝업 자동 제시, "바로 주문"=팝업만 닫힘, 배경 주문 버튼=팝업 재호출. renderOrderReplica(prefix) 공용화로 ⑧ side 강조·hidden 로직 삭제(중립 병렬). 안전모드·전체 펼침 시 팝업 강제 닫힘. 시트 CSS 공용 확장.
+- 테스트: 신규 test_step0_order_replica_with_intercept(팝업 골격·배선 제한·side 강조 부재 강제). 중간 발견: HTML 주석의 "1탭 보장"이 lexicon AST-05(보장)에 적중 → 문구 수정으로 해소(기대값 완화 없음 — 가드가 주석까지 잡는 것 실증).
+
+**변경 파일**
+- docs/requirements-contract.md·docs/plans/s4-ui-spec.md·Decisionlog.md(커밋1) / src/webapp/static/{index.html,app.js,app.css}·tests/webapp/test_dom_constraints.py·Worklog.md(커밋2)
+
+**검증**
+- pytest **257건 전체 통과**. playwright 실브라우저 6경로: ① 최초 로드 팝업 자동 열림(리마인드·보유 요약·중립 병렬·모의 바)→브리핑 시작→① ② prev 복귀 시 팝업 재개→"바로 주문" 1탭(팝업만 닫힘·S0 유지)→배경 판매하기 클릭 시 재호출 ③ 완주(⑤→⑥ 체결→⑦ "실제 주문 화면으로"→⑧ 수량 10주·구매/판매 병렬·둘 다 disabled·탭 중립·팝업 없음) ④ "처음으로" 복귀 시 팝업 재개 ⑤ 팝업 연 채 안전모드 on 강제 닫힘·off 복귀, 전체 펼침 on 시 닫힘 ⑥ first_buy(팝업 자동·계좌 요약·리마인드 없음·병렬). 콘솔 에러·경고 0.
+- 정합 QA: 직전(기존 256건 무수정 통과) / 직후(발표 서사 "주문 화면이 양 끝" — 대본 인용 가능) / 전체(§14 해석 정련은 D-0717-2121에 근거 기록·유도 문구 금지 테스트는 그대로 강제) — 발견 1건(주석 lexicon 적중) 즉시 수정.
+
+**판단 근거** — D-0717-2121-main.
+
+**결과** — 완료. S5·S6·S7 진행 지시 대기(전야).
+
 ### W-0717-2009-main · 타 환경 설치 절차 질의 답변 + README 설치 절 신설
 **요청** — ".venv가 gitignore인데 다른 로컬에서 어떻게 실행? git clone 후 uv sync?"
 **수행 작업** — 답변: .venv 미추적은 정상(재구성 레시피 = requirements.txt/lock). pyproject.toml·uv.lock이 없어 `uv sync`는 불가 — uv 경로는 `uv venv --python 3.10` + `uv pip sync requirements.lock.txt`, 표준 경로는 `python -m venv` + `pip install -r requirements.lock.txt`. README에 "설치" 절 신설(Python 3.10 권장·설치만 온라인 필요·.env/logs도 환경별 재구성·수집 대상 주의).

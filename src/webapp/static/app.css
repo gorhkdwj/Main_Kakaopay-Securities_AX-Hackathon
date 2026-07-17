@@ -215,7 +215,7 @@ textarea { resize: vertical; }
 .confirm-label { display: block; font-size: 12px; font-weight: 700; margin-top: 10px; }
 
 /* ⑥ 바텀시트(실앱 주문 확인 형식 계승) */
-#sheet-backdrop {
+#sheet-backdrop, #intercept-backdrop {
   position: fixed; inset: 0; z-index: 80;
   background: rgba(0,0,0,.45);
   display: flex; align-items: flex-end; justify-content: center;
@@ -224,7 +224,7 @@ textarea { resize: vertical; }
    ID 선택자의 display:flex가 UA의 [hidden]{display:none}을 이겨
    바텀시트가 닫히지 않던 버그(T-0716-1510) 재발 방지 */
 [hidden] { display: none !important; }
-#order-sheet {
+#order-sheet, #intercept-sheet {
   width: 100%; max-width: 420px;
   background: #fff; border-radius: 18px 18px 0 0;
   padding: 16px 16px 22px;
@@ -277,8 +277,6 @@ textarea { resize: vertical; }
   background: #f6f7f9; color: var(--sub); font-size: 13px; font-weight: 800;
   font-family: inherit;
 }
-#s8-tab-buy.on { background: #fff; color: var(--up); border-color: var(--up); }
-#s8-tab-sell.on { background: #fff; color: var(--down); border-color: var(--down); }
 .btn.order-fake { color: #fff; border: none; }
 .btn.order-fake.side-buy { background: var(--up); }
 .btn.order-fake.side-sell { background: var(--down); }

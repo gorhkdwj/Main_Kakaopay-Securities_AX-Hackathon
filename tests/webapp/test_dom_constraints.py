@@ -211,3 +211,33 @@ def test_home_skip_button_replaces_later():
     sec0 = section_slice(html, "step-0")
     assert "브리핑 없이 바로 주문할게요" in sec0
     assert "나중에 볼게요" not in html
+
+
+def test_step0_order_replica_with_intercept():
+    """S0 = 실앱 주문 화면 재현(진입) + 인터셉트 팝업(계약 §9 상시 인터셉트 — D-0717-2121).
+
+    S0 주문 버튼은 팝업만 연다(주문 실행 아님 — 실행 마커·"체결하기" 부재는
+    test_order_execute_button_only_in_step6이 겸증). 구매/판매는 전 시나리오
+    병렬 노출·색 구분만(side 강조·hidden 로직 금지).
+    """
+    html = read_static("index.html")
+    js = read_static("app.js")
+    sec0 = section_slice(html, "step-0")
+
+    # 배경 = 주문 화면 재현(시연 라벨) + 인터셉트 팝업 골격·갈림길 2버튼
+    assert "실앱 주문 화면 재현(시연용)" in sec0
+    assert 'id="intercept-backdrop"' in sec0
+    assert "판단 전 브리핑 시작하기" in sec0
+    assert "브리핑 없이 바로 주문할게요" in sec0
+
+    # S0 주문 버튼 2종: 존재 + 팝업 배선(openIntercept)만 허용
+    for bid in ("s0-order-buy", "s0-order-sell"):
+        assert f'id="{bid}"' in sec0, f"{bid} 버튼이 S0에 없습니다"
+        assert f'el("{bid}").addEventListener("click", openIntercept)' in js, \
+            f"{bid}는 인터셉트 팝업 배선만 가져야 합니다"
+
+    # 방향 중립(전 시나리오 공통): side 강조·hidden 로직 부재
+    for forbidden in ('el("s8-order-buy").hidden', 'el("s8-order-sell").hidden',
+                      'el("s8-tab-buy").classList', 'el("s0-order-buy").hidden',
+                      'el("s0-tab-buy").classList'):
+        assert forbidden not in js, f"side 강조/hidden 로직 잔존: {forbidden}"
