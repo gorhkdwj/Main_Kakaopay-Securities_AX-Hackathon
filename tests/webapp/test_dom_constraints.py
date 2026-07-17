@@ -231,11 +231,14 @@ def test_step0_order_replica_with_intercept():
     assert "판단 전 브리핑 시작하기" in sec0
     assert "브리핑 없이 바로 주문할게요" in sec0
 
-    # S0 주문 버튼 2종: 존재 + 팝업 배선(openIntercept)만 허용
-    for bid in ("s0-order-buy", "s0-order-sell"):
+    # S0 주문 버튼 2종: 존재 + 배선은 setFlowSide(방향 결정→팝업)만 허용
+    # (양방향 — D-0718-0225: 주문 실행이 아니라 흐름 방향 결정 + 인터셉트 발동)
+    for bid, side in (("s0-order-buy", "buy"), ("s0-order-sell", "sell")):
         assert f'id="{bid}"' in sec0, f"{bid} 버튼이 S0에 없습니다"
-        assert f'el("{bid}").addEventListener("click", openIntercept)' in js, \
-            f"{bid}는 인터셉트 팝업 배선만 가져야 합니다"
+        assert f'el("{bid}").addEventListener("click", () => setFlowSide("{side}"))' in js, \
+            f"{bid}는 setFlowSide 배선만 가져야 합니다"
+    # setFlowSide는 주문 실행 없이 팝업(openIntercept)으로 이어진다
+    assert "function setFlowSide" in js and "openIntercept()" in js
 
     # 방향 중립(전 시나리오 공통): side 강조·hidden 로직 부재 + 탭 중복 제거 유지
     for forbidden in ('el("s8-order-buy").hidden', 'el("s8-order-sell").hidden',

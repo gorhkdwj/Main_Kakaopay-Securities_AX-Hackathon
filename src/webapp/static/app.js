@@ -10,6 +10,8 @@ const S = {
   scenarios: [],
   data: null,          // GET /api/scenario/{id} 응답
   step: 0,             // 0=홈, 1~8=위저드
+  flowSide: null,      // 흐름 방향("sell"|"buy") — S0 진입 클릭이 결정(양방향, D-0718-0225).
+                       // 기본값은 서버 meta.side(보유 기반). ③④⑤⑥이 이 값을 따른다.
   partialQty: 10,      // ④ 일부 판매 수량(기본 10주)
   previews: {},        // key(partial|full|b8|b10) → {preview}|{error}
   intent: null,        // ⑤ 검토 의향(4택 라벨)
@@ -120,6 +122,9 @@ async function loadScenario(id) {
   S.scenarioId = id;
   S.data = r.body;
   S.step = 0;
+  // 흐름 방향(양방향 — D-0718-0225): 시나리오 기본값은 서버 meta.side(보유 기반),
+  // 이후 S0의 구매/판매 클릭(setFlowSide)이 이 값을 전환한다.
+  S.flowSide = r.body.meta.side;
   S.partialQty = 10;
   S.previews = {};
   S.intent = null;
@@ -141,18 +146,18 @@ function holdingQty() {
   return h && h.qty ? h.qty : 0;
 }
 async function fetchScenarioPreviews() {
-  const side = S.data.meta.side;
-  if (side === "sell") {
-    await Promise.all([
-      fetchPreview("partial", "sell", S.partialQty),
-      fetchPreview("full", "sell", holdingQty()),
-    ]);
-  } else {
-    await Promise.all([
-      fetchPreview("b8", "buy", 8),
-      fetchPreview("b10", "buy", 10),
-    ]);
+  // 양방향(D-0718-0225): 가능한 방향의 미리보기를 전부 선취득 —
+  // 보유가 있으면 판매 2종, 예수금이 있으면 구매 2종(최대 4슬롯).
+  const jobs = [];
+  if (holdingQty() > 0) {
+    jobs.push(fetchPreview("partial", "sell", S.partialQty));
+    jobs.push(fetchPreview("full", "sell", holdingQty()));
   }
+  if ((S.data.meta.cash || 0) > 0) {
+    jobs.push(fetchPreview("b8", "buy", 8));
+    jobs.push(fetchPreview("b10", "buy", 10));
+  }
+  await Promise.all(jobs);
 }
 async function fetchPreview(key, side, qty) {
   const r = await api("/api/preview", {
@@ -179,6 +184,30 @@ function goStep(n) {
 }
 function openIntercept() { el("intercept-backdrop").hidden = false; }
 function closeIntercept() { el("intercept-backdrop").hidden = true; }
+/* S0 구매/판매 클릭 = 흐름 방향 결정 + 인터셉트 발동(양방향 — D-0718-0225) */
+function setFlowSide(next) {
+  if (next === "sell" && holdingQty() === 0) {
+    // 보유 0이면 판매 흐름이 성립하지 않는다 — 방향 유지 + 사실 안내만
+    renderStep0();
+    el("itc-side-note").textContent =
+      "지금은 판매할 보유 수량이 없어요 — 이 종목은 구매 검토만 할 수 있어요.";
+    openIntercept();
+    return;
+  }
+  if (S.flowSide === next) {  // 같은 방향 재클릭 = 팝업만(상태 리셋 없음)
+    el("itc-side-note").textContent = "";
+    openIntercept();
+    return;
+  }
+  S.flowSide = next;
+  // 방향 전환 = 새 검토의 시작 — 이전 방향의 의향·체결·기록 표시를 초기화
+  S.intent = null;
+  S.settledIntent = null;
+  S.settlement = null;
+  S.savedRecord = null;
+  renderAll();       // 팝업 내용까지 새 방향 기준으로 재렌더한 뒤
+  openIntercept();   // 연다(순서 고정 — 내용 정합)
+}
 function renderChrome() {
   document.querySelectorAll(".step-panel").forEach((p) => {
     p.classList.toggle("active", Number(p.dataset.step) === S.step);
@@ -250,8 +279,10 @@ function renderStep0() {
     first_buy: "탐색에서 발견한 종목을 살펴보는 중이에요",
   };
   el("s0-title").textContent = titles[S.scenarioId] || "판단이 필요한 순간이에요";
+  // 팝업 카드는 흐름 방향이 아니라 '보유 유무(데이터 사실)' 기준이다 —
+  // 보유 30주 상태에서 구매 클릭 시 "보유 없음"이 뜨는 허위 표시 방지(D-0718-0225).
   let html = "";
-  if (m.side === "sell") {
+  if (holdingQty() > 0) {
     const hold = S.data.hold;
     html += `<div class="kcard">
       <div class="tag fact">보유 종목</div>
@@ -262,7 +293,8 @@ function renderStep0() {
       <div class="sub-note" style="margin:4px 0 0">
         ${num(m.holding.qty)}주 보유 · 평균 구매가 ${won(m.holding.avg_price)}<br>
         평가손익 ${hold ? pnlMoney(hold.eval_pnl) : "확인 불가"} ·
-        이 종목 비중 ${hold ? hold.weight_pct.toFixed(1) + "%" : "확인 불가"}
+        이 종목 비중 ${hold ? hold.weight_pct.toFixed(1) + "%" : "확인 불가"}${
+        (m.cash || 0) > 0 ? `<br>예수금 <b>${won(m.cash)}</b>` : ""}
       </div>
     </div>`;
   } else {
@@ -277,6 +309,7 @@ function renderStep0() {
     </div>`;
   }
   el("itc-holding").innerHTML = html;
+  el("itc-side-note").textContent = "";  // 방향 안내는 setFlowSide가 필요 시 채운다
 
   const records = S.data.past_records || [];
   el("itc-remind").innerHTML = records.map((r) => `
@@ -401,7 +434,7 @@ function renderStep2() {
 
 /* ③ 체크리스트 5문 + 이해 확인 */
 function renderStep3() {
-  const side = S.data.meta.side;
+  const side = S.flowSide;  // 흐름 방향 = S0 진입 클릭(양방향 — D-0718-0225)
   const items = side === "sell" ? [
     "오늘 상황이 내 재검토 조건에 해당하는지 확인했나요?",
     "사실과 해석을 구분해서 봤나요?",
@@ -434,7 +467,7 @@ function renderStep3() {
 /* ④ 대칭 시나리오 비교(엔진 결과 표시 — 모든 열 동일 크기·강조색 없음) */
 function renderStep4() {
   const m = S.data.meta;
-  const side = m.side;
+  const side = S.flowSide;
   el("s4-basis").textContent =
     `가상 기준시각 ${m.as_of} · 지정가 ${num(m.price.close)}원 · 수수료 0.015%` +
     (side === "sell" ? " · 세금 0.20%" : " · 구매는 세금 없음");
@@ -504,7 +537,7 @@ async function onPartialQtyChange(ev) {
 
 /* ⑤ 검토 의향 4버튼 + 투자 일지 */
 function renderStep5() {
-  const side = S.data.meta.side;
+  const side = S.flowSide;
   const labels = INTENTS[side];
   document.querySelectorAll(".intent-btn").forEach((btn, i) => {
     btn.textContent = labels[i];
@@ -519,7 +552,7 @@ function renderStep5() {
 /* ⑥ 별도 모의 주문 화면 */
 function orderPlanFromIntent() {
   if (!S.data) return null;
-  const side = S.data.meta.side;
+  const side = S.flowSide;
   if (side === "sell") {
     if (S.intent === "일부 판매 검토") return { key: "partial", side };
     if (S.intent === "전량 판매 검토") return { key: "full", side };
@@ -532,7 +565,7 @@ function orderPlanFromIntent() {
 function renderStep6() {
   const m = S.data.meta;
   const plan = orderPlanFromIntent();
-  const sideWord = m.side === "sell" ? "판매" : "구매";
+  const sideWord = S.flowSide === "sell" ? "판매" : "구매";
 
   if (S.settlement) {
     el("s6-summary").innerHTML = "";
@@ -566,7 +599,7 @@ function renderStep6() {
     ["수량", `<b>${num(v.inputs.qty)}주</b> — 입력하신 수량 그대로`],
     ["예상 체결시장", "KRX·NXT 중 유리한 시장 자동 배분(SOR) · 계산은 KRX 기준"],
   ];
-  if (m.side === "sell") {
+  if (S.flowSide === "sell") {
     rows.push(["예상 판매대금", won(v.gross_amount)],
       ["수수료", won(v.fee)],
       ["세금", won(v.tax)],
@@ -599,7 +632,7 @@ function openSheet() {
   const v = slot.preview;
   const m = S.data.meta;
   const name = m.instrument ? m.instrument.name : "";
-  const sideSell = m.side === "sell";
+  const sideSell = S.flowSide === "sell";
 
   el("sheet-rows").innerHTML = [
     ["종목", `${esc(name)} (가상)`],
@@ -797,9 +830,9 @@ function wireEvents() {
   el("btn-start").addEventListener("click", () => goStep(1)); // goStep이 팝업을 닫는다
   // 레이어는 투자 행동을 막지 않는다 — "바로 주문"은 팝업만 닫고 주문 화면(S0 재현)에 머묾(계약 §9)
   el("btn-skip-briefing").addEventListener("click", closeIntercept);
-  // S0 배경 주문 버튼 = 인터셉트 재현(주문 실행 아님 — 팝업 재호출)
-  el("s0-order-buy").addEventListener("click", openIntercept);
-  el("s0-order-sell").addEventListener("click", openIntercept);
+  // S0 배경 주문 버튼 = 흐름 방향 결정 + 인터셉트 발동(주문 실행 아님 — D-0718-0225)
+  el("s0-order-buy").addEventListener("click", () => setFlowSide("buy"));
+  el("s0-order-sell").addEventListener("click", () => setFlowSide("sell"));
   el("btn-prev").addEventListener("click", () => goStep(S.step - 1));
   el("btn-next").addEventListener("click", () => {
     if (S.step >= 8) return goStep(0);
