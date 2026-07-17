@@ -183,6 +183,15 @@ h3 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; margin: 4px 0 10
   border-radius: var(--r-badge); padding: 1px 8px; margin-right: 6px;
   background: var(--chip-gray); color: var(--flat);
 }
+/* ② 브리핑 — 실앱 "◆AI분석" 배지·기준시각 메타 문법(스펙 §2.6) */
+.fact-text { font-size: 16px; color: var(--ink); line-height: 1.55; }
+.ai-meta { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.src-badge {
+  background: var(--ai-badge-bg); color: var(--ai-badge-tx);
+  border-radius: 5px; padding: 3px 8px; font-size: 13px; font-weight: 700;
+}
+.asof-text { font-size: 13px; color: var(--sub); }
+#s2-src { margin-bottom: 4px; }
 
 /* 가격 헤더(실앱 계승: 종목명·현재가·등락·SOR 정규장 라벨 — 스펙 §2.2) */
 .price-head { padding: 6px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }

@@ -471,15 +471,16 @@ function renderStep2() {
     return;
   }
 
+  // 브리핑 원천 라벨(계약 §8 — 폴백을 숨기지 않는다): 실앱 "◆AI분석" 배지 문법으로 표시(스펙 §2.6)
   const srcLabel = BRIEFING_SOURCE_LABELS[S.data.briefing_source] || "";
   el("s2-src").innerHTML = srcLabel
-    ? `<span>브리핑 생성: ${esc(srcLabel)}</span>` : "";
+    ? `<span class="src-badge">◆ ${esc(srcLabel)}</span><span class="asof-text">브리핑 생성 원천</span>` : "";
 
   let facts = (b.facts || []).map((f) => `
     <div class="kcard">
       <div class="tag fact">확인된 사실</div>
-      ${esc(f.text)}
-      <div class="meta"><span>출처: ${esc(f.source_id)}(가상)</span><span>기준시각 ${esc(f.as_of)}</span></div>
+      <div class="fact-text">${esc(f.text)}</div>
+      <div class="ai-meta"><span class="src-badge">◆ 출처 ${esc(f.source_id)}(가상)</span><span class="asof-text">기준시각 ${esc(f.as_of)}</span></div>
     </div>`).join("");
   if (m.disclosures_state) {
     facts += `<div class="kcard state">공시 — ${esc(m.disclosures_state)} · 여기서는 값을 만들어 채우지 않아요</div>`;
