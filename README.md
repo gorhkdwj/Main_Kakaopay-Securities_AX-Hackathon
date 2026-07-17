@@ -32,6 +32,7 @@ uv pip sync requirements.lock.txt
 ```
 
 - 브라우저에서 http://127.0.0.1:8765 접속. 반드시 **프로젝트 루트에서** 실행한다(src는 namespace package).
+- **`[WinError 10013]`으로 기동 실패 시**(재부팅 후 흔함): 해당 포트가 Hyper-V/WSL의 동적 예약 범위에 들어간 것 — `netsh interface ipv4 show excludedportrange protocol=tcp`로 범위를 확인하고 **범위 밖 포트로 실행**한다(예: `--port 9000`). 포트 번호는 관례일 뿐 데모 동작과 무관. 영구 고정이 필요하면 관리자 PowerShell에서 `net stop winnat` → `netsh int ipv4 add excludedportrange protocol=tcp startport=8765 numberofports=1` → `net start winnat`(T-0717-2031 참조).
 - 테스트 전체 실행: `.\.venv\Scripts\python.exe -m pytest -q`
 - **변경 반영 규칙**: 정적 파일(`src/webapp/static/`)과 fixture(`data/fixtures/`)는 서버 재시작 없이 반영된다 — 브라우저에서 강력 새로고침(Ctrl+F5)만 하면 된다. `app.py` 등 파이썬 코드는 서버 재시작이 필요하다 — `--reload` 옵션을 켜 두면 자동 재시작된다.
 
