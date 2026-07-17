@@ -15,6 +15,13 @@
 
 ---
 
+### W-0717-2009-main · 타 환경 설치 절차 질의 답변 + README 설치 절 신설
+**요청** — ".venv가 gitignore인데 다른 로컬에서 어떻게 실행? git clone 후 uv sync?"
+**수행 작업** — 답변: .venv 미추적은 정상(재구성 레시피 = requirements.txt/lock). pyproject.toml·uv.lock이 없어 `uv sync`는 불가 — uv 경로는 `uv venv --python 3.10` + `uv pip sync requirements.lock.txt`, 표준 경로는 `python -m venv` + `pip install -r requirements.lock.txt`. README에 "설치" 절 신설(Python 3.10 권장·설치만 온라인 필요·.env/logs도 환경별 재구성·수집 대상 주의).
+**변경 파일** — README.md, Worklog.md
+**검증** — 문서만 변경(설치 명령의 타 환경 실제 리허설은 미실행 — S7 리허설 항목으로 제안). 정합 QA: README-저장소 파일 구성 일치 확인(requirements 2종 실재·형식 확인) — 통과.
+**결과** — 완료. 미검증 범위: 타 환경 클린 설치 실측(S7 편입 권고).
+
 ### W-0716-2118-main · S4 흐름 재구성(피드백 5건, 플랜 승인) — ⑧=실앱 주문 화면 재현·안전모드 오버레이·오류 가시화
 **요청**
 - 사용자 피드백 5건: ① 홈 "나중에 볼게요" → "브리핑 없이 바로 주문할게요" ② 시나리오 전환 무반응 ③ ⑦이 모의로 끝나면 무의미 — 실제 주문 화면으로 연결 ④ 실앱 매수·매도 페이지 비기능 재현으로 앞·뒤 연결성 시연 ⑤ 안전모드는 위저드 ⑧이 아니라 데모 패널 보기 방식. 플랜 모드 탐색(2 subagent)·설계(1 subagent) 후 사용자 승인.

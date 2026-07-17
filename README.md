@@ -8,6 +8,22 @@
 - 최종 산출물: 로컬 웹앱 데모 + Codex 플러그인 포장 + 결과물 브리프 + 프롬프트 로그
 - 원칙: AI는 결론을 말하지 않는다 — 출처·기준시각 있는 사실, 대칭 시나리오, 비용·세금·D+2 사전 고지, 모의 체결까지만
 
+## 설치 (다른 환경에서 처음 clone했을 때)
+`.venv`는 Git에 올리지 않는다(가상환경은 OS 종속 — 재구성 레시피만 커밋). Python **3.10 권장**(락파일 기준), 설치 시에만 인터넷 필요:
+
+```
+# 표준(pip)
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt
+
+# 또는 uv 사용 시 (pyproject.toml이 없으므로 uv sync가 아니라 uv pip sync)
+uv venv --python 3.10
+uv pip sync requirements.lock.txt
+```
+
+- `requirements.lock.txt` = 전체 버전 고정(재현용), `requirements.txt` = 직접 의존 8개(버전 미고정).
+- `.env`(API 키)와 `logs/`(프롬프트 로그)도 Git 제외 — 새 환경에서는 `.env`를 직접 만들고, 그 환경의 `logs/`도 제출 전 수집 대상이다(CLAUDE.md §13-4).
+
 ## 실행 방법
 데모 웹앱(오프라인 — LLM·외부 네트워크 0회로 완주):
 
