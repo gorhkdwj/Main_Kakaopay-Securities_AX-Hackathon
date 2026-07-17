@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0819-main · wt/redesign → main 병합·push
+**요청** — "github에 브랜치 merge해서 pull해줘".
+**수행 작업** — origin/wt/redesign(리디자인 S1~S9, 13커밋)을 main에 로컬 merge 후 origin/main push(`b9cb247`). Worklog.md 충돌 1건은 §13-3 규약대로 양쪽 블록 보존·타임스탬프순(0758→0752→0715) 정렬로 해소(내용 무편집).
+**변경 파일** — 병합 유입: src/webapp/static/{app.css,app.js,index.html}, docs/plans/redesign-design-spec.md(신규), docs/handoff/2026-07-18_디자인개편_진행인수인계.md(신규), Decisionlog.md, Worklog.md(충돌 해소 + 본 항목).
+**검증** — 병합 게이트(§10): push 전 비밀정보 스캔 0건 · 병합 트리 pytest 302건 전체 통과 · 충돌 마커 잔존 0건 · main 최신분(6d9e7fc .gitignore) 포함 병합. 정합 QA 통과(발견 0건 — 브랜치 변경이 웹앱 정적 파일·문서에 국한, 엔진·계약 무변경).
+**판단 근거** — 본선 당일은 로컬 merge(§10 PR 생략), 병합은 main 조율 세션 수행(§13-6).
+**결과** — 완료. origin/main = b9cb247, 작업 트리 clean. wt/redesign 브랜치는 보존(로그 수집 전 worktree 삭제 금지 — §13-4).
+
 ### W-0718-0758-redesign · 디자인 전면 개편 2차(S4~S9) — 스펙 기반 전 화면 실앱급 재구축 완료
 **요청** — 포트폴리오 전환 고지(해커톤 종료·공개 가능·실계좌만 비공개) + "시간 제한 없이 자율 연속 작업" 지시(D-0718-0720-redesign). 기준: 실앱 픽셀 복제 최우선·전 화면 재구축.
 **수행 작업** — Decisionlog D-0718-0720 기록. 스펙 v1.0(`docs/plans/redesign-design-spec.md`) 단일 기준으로 유닛 A~E 수행: S4 `3a5f448` 전역 토큰·타이포 스펙 정합(플랫 원칙·구분선 4종·pill 체계) → S5 `2f03a10` ⑥ 실앱 시트 재현(핸들바·총액 행·점선·1:2.05 버튼) → S6 `cda3bcf` ② ◆AI분석 배지 문법 → S7 `06e7fef` 지정가|시장가 세그+전 화면 순회 → S8 `fbf1c86` 모달 모션·차트 dot → 충실도 QA 워크플로(wf_41ce32fa: 캡처27/30/31 비교 2 + 제약 감사 1 — 감사 전항목 통과) → S9 `8140284` 갭 12건 반영(차트 226px·눈금·기간칩 2줄·CTA 판매/구매·시트 질감). 인수인계 §9 QA 결과 추가.
