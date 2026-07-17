@@ -1,0 +1,53 @@
+{
+  "scenario_id": "loss8",
+  "generated_by": "static_compose_draft_v1",
+  "generated_at": "2026-07-17 22:59 KST",
+  "fixture_sha256": "e9421345c6a8d9bdd694f638edff4a1c1c09da52c80d6e8be15f52a0578f3934",
+  "note": "정적 조립 기반 초안 — OpenAI 키 확보 후 본 스크립트(실LLM 모드)로 재생성 예정",
+  "response": {
+    "facts": [
+      {
+        "text": "3분기 잠정 영업이익 128억 원 — 전년 동기 대비 -32%",
+        "source_id": "DEMO-SRC-101",
+        "as_of": "2026-07-17 09:10 KST"
+      },
+      {
+        "text": "종가 46,000원 · 전일 대비 -8.0% · 거래량 576,000주(20일 평균의 3.2배)",
+        "source_id": "DEMO-SRC-102",
+        "as_of": "2026-07-17 15:30 KST"
+      }
+    ],
+    "interpretations": [
+      {
+        "text": "영업이익 감소분에는 일회성 비용(신공장 초기 가동)이 포함되어 있어요 — 일회성이 맞다면 다음 분기 수치는 달라질 수 있고, 다음 실적 발표에서 확인돼요.",
+        "basis": [
+          "DEMO-SRC-101"
+        ],
+        "stance": "긍정 시각"
+      },
+      {
+        "text": "이번 감소가 2개 분기 연속으로 이어진다면, 계획에 적어 두신 재검토 조건에 해당해요 — 다음 실적 발표 일정을 미리 확인해 두세요.",
+        "basis": [
+          "DEMO-SRC-101"
+        ],
+        "stance": "부정 시각"
+      }
+    ],
+    "unknowns": [
+      "2개 분기 연속 악화 여부는 다음 실적 발표에서 확인됩니다.",
+      "공시에 없는 회사 내부 사정(비용·수주 계획)은 공개 자료로 알 수 없습니다."
+    ],
+    "user_inputs": {
+      "quantity": null,
+      "intent": null,
+      "situation": "loss8"
+    },
+    "calculation_id": null,
+    "policy_result": "information_only",
+    "next_questions": [
+      "오늘 상황이 기록해 두신 재검토 조건(실적 2개 분기 연속 악화)에 해당하나요?",
+      "현재 -8.0%는 계획에 적어 두신 감수 범위(-15%) 안에 있나요?",
+      "오늘 꼭 결정해야 하는 이유가 있나요?"
+    ]
+  }
+}

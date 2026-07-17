@@ -60,9 +60,16 @@ def records_dir(tmp_path) -> Path:
 
 
 @pytest.fixture
-def client(records_dir) -> TestClient:
-    """기본 fixture(data/fixtures)를 쓰는 새 앱 클라이언트(세션 카운터 0에서 시작)."""
-    return TestClient(create_app(records_dir=records_dir))
+def client(records_dir, tmp_path) -> TestClient:
+    """기본 fixture(data/fixtures)를 쓰는 새 앱 클라이언트(세션 카운터 0에서 시작).
+
+    briefing_mode="cache"로 고정한다 — 사용자 .env에 OPENAI_API_KEY가 있어도
+    테스트가 라이브 호출을 시도하지 않게(네트워크 0회 원칙). 원본 fixture는
+    캐시 지문이 일치하므로 cache 경로, 변형 fixture는 static 폴백이 된다.
+    """
+    return TestClient(create_app(records_dir=records_dir,
+                                 briefing_mode="cache",
+                                 audit_dir=tmp_path / "audit"))
 
 
 @pytest.fixture
@@ -70,6 +77,8 @@ def make_variant_client(tmp_path, records_dir):
     """원본 fixture를 변형한 사본으로 앱을 만드는 팩토리(원본 무수정).
 
     사용: client = make_variant_client("loss8", lambda fx: fx.pop("disclosures"))
+    변형 fixture는 캐시 지문(SHA-256)과 어긋나므로 브리핑은 항상 정적 조립
+    경로로 흘러간다(계약 §8 — 스테일 캐시 미사용의 검증 전제).
     """
     def _make(scenario_id: str, mutate) -> TestClient:
         fx = load_scenario(scenario_id)
@@ -78,6 +87,8 @@ def make_variant_client(tmp_path, records_dir):
         vdir.mkdir(parents=True, exist_ok=True)
         with open(vdir / f"scenario_{scenario_id}.json", "w", encoding="utf-8") as fp:
             json.dump(fx, fp, ensure_ascii=False, indent=2)
-        return TestClient(create_app(fixtures_dir=vdir, records_dir=records_dir))
+        return TestClient(create_app(fixtures_dir=vdir, records_dir=records_dir,
+                                     briefing_mode="cache",
+                                     audit_dir=tmp_path / "audit"))
 
     return _make

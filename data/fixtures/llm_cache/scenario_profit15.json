@@ -1,0 +1,53 @@
+{
+  "scenario_id": "profit15",
+  "generated_by": "static_compose_draft_v1",
+  "generated_at": "2026-07-17 22:59 KST",
+  "fixture_sha256": "398a1cc9e3a1ac0cc63ca517675a0e61048e55eb45ac12cedb92f1d8c9053d6b",
+  "note": "정적 조립 기반 초안 — OpenAI 키 확보 후 본 스크립트(실LLM 모드)로 재생성 예정",
+  "response": {
+    "facts": [
+      {
+        "text": "2분기 잠정 매출 812억 원 — 전년 동기 대비 +18%",
+        "source_id": "DEMO-SRC-201",
+        "as_of": "2026-07-17 08:40 KST"
+      },
+      {
+        "text": "종가 46,000원 · 전일 대비 +4.5% · 거래량 432,000주(20일 평균의 2.4배)",
+        "source_id": "DEMO-SRC-202",
+        "as_of": "2026-07-17 15:30 KST"
+      }
+    ],
+    "interpretations": [
+      {
+        "text": "매출 증가(+18%)가 신제품 판매에서 나온 것이라면, 계획에 적어 두신 '신제품 실적 확인' 조건에 가까워진 거예요.",
+        "basis": [
+          "DEMO-SRC-201"
+        ],
+        "stance": "긍정 시각"
+      },
+      {
+        "text": "오늘 +4.5% 상승에는 실적 외 수급 요인이 섞였을 수 있어요 — 상승이 실적 때문인지 분위기 때문인지는 하루만으로는 구분되지 않아요.",
+        "basis": [
+          "DEMO-SRC-201"
+        ],
+        "stance": "부정 시각"
+      }
+    ],
+    "unknowns": [
+      "신제품 매출이 이어질지는 다음 분기 실적 발표에서 확인됩니다.",
+      "오늘 상승분에서 실적 요인과 수급 요인은 구분해 확인할 수 없습니다."
+    ],
+    "user_inputs": {
+      "quantity": null,
+      "intent": null,
+      "situation": "profit15"
+    },
+    "calculation_id": null,
+    "policy_result": "information_only",
+    "next_questions": [
+      "오늘 상황이 기록해 두신 재검토 조건(목표 +20% 도달 또는 신제품 실적 확인)에 해당하나요?",
+      "지금 판매를 검토하는 이유를 한 문장으로 적을 수 있나요?",
+      "일부 판매와 전량 판매 후의 비중 차이를 확인하셨나요?"
+    ]
+  }
+}

@@ -336,9 +336,19 @@ function renderStep1() {
 }
 
 /* ② 관련 사실 브리핑 */
+const BRIEFING_SOURCE_LABELS = {
+  live: "AI 생성(실시간)",
+  cache: "준비된 응답(캐시)",
+  static: "기본 구성(정적)",
+};
+
 function renderStep2() {
   const b = S.data.briefing;
   const m = S.data.meta;
+
+  const srcLabel = BRIEFING_SOURCE_LABELS[S.data.briefing_source] || "";
+  el("s2-src").innerHTML = srcLabel
+    ? `<span>브리핑 생성: ${esc(srcLabel)}</span>` : "";
 
   let facts = (b.facts || []).map((f) => `
     <div class="kcard">

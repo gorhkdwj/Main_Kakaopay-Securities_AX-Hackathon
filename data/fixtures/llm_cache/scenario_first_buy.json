@@ -1,0 +1,53 @@
+{
+  "scenario_id": "first_buy",
+  "generated_by": "static_compose_draft_v1",
+  "generated_at": "2026-07-17 22:59 KST",
+  "fixture_sha256": "b467316dbeb578a68ebb9c7fd5c8f9908082af8e4900b4c42f21f51056306ab5",
+  "note": "정적 조립 기반 초안 — OpenAI 키 확보 후 본 스크립트(실LLM 모드)로 재생성 예정",
+  "response": {
+    "facts": [
+      {
+        "text": "2분기 잠정 영업이익 195억 원 — 전년 동기 대비 +7%",
+        "source_id": "DEMO-SRC-301",
+        "as_of": "2026-07-10 09:00 KST"
+      },
+      {
+        "text": "종가 46,000원 · 전일 대비 +1.1% · 거래량 198,000주(20일 평균의 1.1배)",
+        "source_id": "DEMO-SRC-302",
+        "as_of": "2026-07-17 15:30 KST"
+      }
+    ],
+    "interpretations": [
+      {
+        "text": "이익이 완만히 늘고 있다는 건 급하게 크는 회사보다 꾸준한 회사에 가깝다는 뜻일 수 있어요 — 이 꾸준함이 유지되는지가 확인 포인트예요.",
+        "basis": [
+          "DEMO-SRC-301"
+        ],
+        "stance": "긍정 시각"
+      },
+      {
+        "text": "+7% 성장을 '안정적'으로 볼지 '느리다'고 볼지는 내 목표 수익률과 기간에 따라 달라져요 — 기준을 먼저 정하면 판단이 쉬워져요.",
+        "basis": [
+          "DEMO-SRC-301"
+        ],
+        "stance": "부정 시각"
+      }
+    ],
+    "unknowns": [
+      "이익 증가가 이어질지는 다음 실적 발표에서 확인됩니다.",
+      "경쟁사와 견준 성장 속도는 이 화면의 데이터만으로는 비교할 수 없습니다."
+    ],
+    "user_inputs": {
+      "quantity": null,
+      "intent": null,
+      "situation": "first_buy"
+    },
+    "calculation_id": null,
+    "policy_result": "information_only",
+    "next_questions": [
+      "목표 보유 기간을 얼마로 정하시겠어요? (예: 1년 · 3년)",
+      "감수할 수 있는 손실은 몇 %까지로 정하시겠어요?",
+      "어떤 조건이 되면 이 구매 판단을 다시 검토하시겠어요?"
+    ]
+  }
+}
