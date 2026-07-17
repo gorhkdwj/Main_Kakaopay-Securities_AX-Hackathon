@@ -765,12 +765,24 @@ function openSheet() {
   const name = m.instrument ? m.instrument.name : "";
   const sideSell = S.flowSide === "sell";
 
-  el("sheet-rows").innerHTML = [
-    ["종목", `${esc(name)} (가상)`],
-    ["수량", `${num(v.inputs.qty)}주`],
-    [sideSell ? "예상 수령액" : "총 결제예정액",
-      `<b>${won(sideSell ? v.net_proceeds : v.total_cost)}</b>`],
-  ].map(([k, val]) => `<div class="sheet-row"><span>${k}</span><span>${val}</span></div>`).join("");
+  // 실앱 주문 확인 시트 구조(캡처 30·31 — 스펙 §2.8): 종목명+N주 방향(액센트) 헤더 →
+  // 총액 대형 행 → 점선 → "주문 자세히 보기"(장식·항상 펼침) → 상세 KV 행.
+  el("sheet-head").innerHTML = `
+    <div class="sheet-head-name">${esc(name)} <span class="meta-inline">(가상)</span></div>
+    <div class="sheet-side-line ${sideSell ? "side-sell" : "side-buy"}">${num(v.inputs.qty)}주 ${sideSell ? "판매" : "구매"}</div>`;
+  el("sheet-rows").innerHTML = `
+    <div class="total-row"><span class="label">${sideSell ? "예상 수령액" : "총 결제예정액"}</span>
+      <span class="value">${won(sideSell ? v.net_proceeds : v.total_cost)}</span></div>
+    <hr class="dotted-hr">
+    <div class="accordion-row" aria-hidden="true"><span>주문 자세히 보기</span><span class="acc-caret">⌃</span></div>
+    <div class="sheet-row"><span>주문 방법</span><span>지정가</span></div>
+    <div class="sheet-row"><span>1주 주문 가격</span><span>${won(m.price.close)}</span></div>
+    <div class="sheet-row"><span>수량</span><span>${num(v.inputs.qty)}주</span></div>
+    ${sideSell
+      ? `<div class="sheet-row"><span>예상 수수료</span><span>${won(v.fee)}</span></div>
+         <div class="sheet-row"><span>예상 세금</span><span>${won(v.tax)}</span></div>`
+      : `<div class="sheet-row"><span>예상 수수료</span><span>${won(v.fee)}</span></div>`}
+    <hr class="dotted-hr">`;
 
   const notices = sideSell ? [
     `수수료 ${won(v.fee)}과 세금 ${won(v.tax)}이 대금에서 빠져요.`,

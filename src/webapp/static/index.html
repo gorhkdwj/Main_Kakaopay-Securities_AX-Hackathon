@@ -163,18 +163,23 @@
     </div>
     <div id="s6-result"></div>
 
-    <!-- 주문 확인 모달(중앙 — 필수 고지 4종 + 비가역 확인 체크, D-0718-0548) -->
+    <!-- 주문 확인 모달(중앙 — 필수 고지 4종 + 비가역 확인 체크, D-0718-0548).
+         실앱 주문 확인 시트(캡처 30·31) 구조 재현: 핸들바·종목명+N주 헤더·총액 대형 행·
+         점선 구분·자세히 보기 행 — 스펙 §2.8. -->
     <div id="sheet-backdrop" hidden>
       <div id="order-sheet" role="dialog" aria-modal="true" aria-label="주문 재확인">
-        <h3>제출 전 마지막 확인이에요</h3>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div id="sheet-head"></div>
         <div id="sheet-rows"></div>
         <div id="sheet-notices"></div>
         <label class="confirm-check" for="confirm-ack">
           <input type="checkbox" id="confirm-ack"> 위 고지를 확인했고, 체결 후 취소할 수 없음을 이해했어요.
         </label>
         <p id="sheet-error" class="err-text" hidden></p>
-        <button id="btn-settle" class="btn exec" data-role="order-execute" type="button" disabled>모의 체결하기</button>
-        <button id="btn-sheet-back" class="btn ghost" type="button">돌아가기</button>
+        <div class="sheet-btn-row">
+          <button id="btn-settle" class="btn exec" data-role="order-execute" type="button" disabled>모의 체결하기</button>
+          <button id="btn-sheet-back" class="btn ghost" type="button">돌아가기</button>
+        </div>
       </div>
     </div>
   </section>

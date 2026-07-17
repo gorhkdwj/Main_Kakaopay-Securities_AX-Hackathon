@@ -315,6 +315,12 @@ textarea { resize: vertical; }
 .total-row .label { font-size: 17px; font-weight: 700; color: var(--ink); }
 .total-row .value { font-size: 21px; font-weight: 800; color: var(--ink); }
 .dotted-hr { border: 0; border-top: 2px dotted var(--dotted); margin: 14px 0 10px; }
+/* "주문 자세히 보기" 행(장식 — 항상 펼침, 스펙 §2.8 아코디언 형태 계승) */
+.accordion-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 14px; color: var(--sub); padding: 2px 0 6px;
+}
+.acc-caret { color: var(--axis); font-size: 15px; font-weight: 700; }
 /* 시트 버튼 행 — 닫기:주버튼 = 1:2.05(스펙 §2.8 확정) */
 .sheet-btn-row { display: flex; flex-direction: row-reverse; gap: 10px; margin-top: 22px; }
 .sheet-btn-row .btn { margin-top: 0; height: 56px; font-size: 17px; }
