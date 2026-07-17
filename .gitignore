@@ -26,3 +26,6 @@ out/
 .DS_Store
 Thumbs.db
 .playwright-mcp/
+
+# Claude Code 개인 로컬 설정(권한 허용 캐시) — 공유 설정 settings.json(로그 훅)은 추적 유지 (헌법 §10)
+.claude/settings.local.json

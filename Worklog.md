@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0752-main · .gitignore에 Claude Code 로컬 설정 제외 추가
+**요청** — `.claude/settings.json`과 `settings.local.json`의 차이 질문 → 설명 후 "gitignore 추가해서 커밋 푸시해줘".
+**수행 작업** — `.gitignore`에 `.claude/settings.local.json` 제외 규칙 추가(개인 권한 허용 캐시 — 커밋 대상 아님). 공유 설정 `settings.json`(로그 훅)은 추적 유지(헌법 §10).
+**변경 파일** — .gitignore, Worklog.md
+**검증** — 정합 QA 통과(발견 0건): git status에서 settings.local.json이 untracked→ignored 전환 확인, 로그 훅 파일(`.claude/settings.json`) 추적 상태 불변, push 전 비밀정보 스캔(변경분에 키·토큰 없음).
+**판단 근거** — settings.local.json은 Claude Code가 자동 생성·갱신하는 개인 설정으로 세션마다 달라 공유 부적합. 실수 커밋 방지.
+**결과** — 완료. main 직접 커밋·푸시(단일 세션 — §13-1).
+
 ### W-0718-0548-main · ⑥ 모의 체결 재확인 완화 + 중앙 모달(데모 최종 수정)
 **요청** — ⑥ 확인 시트 관련 사용자 지적 2건: (1) 팝업 중앙 이동 (2) "수량 재입력"이 값 재계산이 안 됨 — 의도인지·왜 필요한지. 답변 후 "모의 체결에 과한 마찰 아닌가" 재질문 → 권장안(중간) 선택("권장으로 수정").
 **수행 작업** — 헌법 §5 순서: ① s4-ui-spec ⑥·Decisionlog(D-0718-0548) 선행 갱신 ② 코드: index.html(#order-sheet confirm-qty 입력 제거 → confirm-ack "비가역 확인" 체크 + btn-settle 기본 disabled·aria "바텀시트"→"주문 재확인"), app.css(#sheet-backdrop 중앙 정렬·#order-sheet 전 모서리 radius·.confirm-check), app.js(openSheet: confirm-ack 리셋·버튼 비활성 / doSettle: 체크 확인·confirmed_qty=preview.inputs.qty 자동 전달 / ack change 핸들러) ③ test_dom_constraints(confirm-qty→confirm-ack·disabled) ④ 런북 §4. settle.py·계약 §9 고지·게이트 분모 불변.
