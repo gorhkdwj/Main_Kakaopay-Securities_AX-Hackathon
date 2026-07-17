@@ -5,7 +5,7 @@
 ## 개요
 - 목적: 초보 투자자가 어떤 판단 순간에든(매수·매도·보류) 스스로 설명 가능한 결정을 내리도록 돕는 데모 시스템 — 우선 공략·대표 시연은 고불안 순간(급락·손실 보유)
 - 주요 사용자: 초보 투자자(경험·역량 축 정의) / 시연 청중: 본선 심사위원
-- 최종 산출물: 로컬 웹앱 데모 + Codex 플러그인 포장 + 결과물 브리프 + 프롬프트 로그
+- 최종 산출물(본선 제출): **결과물 브리프 + 프롬프트 로그**(공지 확정 — 코드/ZIP 제출 없음) · 시연은 로컬 웹앱(본인 노트북) · 플러그인 포장은 당일 형식 요구 시 즉시 패키징(S7 런북 플레이북, 기본 미생성)
 - 원칙: AI는 결론을 말하지 않는다 — 출처·기준시각 있는 사실, 대칭 시나리오, 비용·세금·D+2 사전 고지, 모의 체결까지만
 
 ## 설치 (다른 환경에서 처음 clone했을 때)
@@ -45,11 +45,11 @@ uv pip sync requirements.lock.txt
   # 선택 변수: ANTHROPIC_MODEL=claude-sonnet-5 (기본값) · BRIEFING_MODE=auto|live|cache|static (기본 auto)
   ```
   키가 있으면 `auto`가 live를 시도하고, 실패(타임아웃 8초·오류·오프라인) 시 즉시 캐시로 전환한다. 키가 없으면 네트워크를 시도하지 않는다. 호출은 httpx 직행(REST)이라 별도 SDK 설치가 필요 없다.
-- **캐시 재생성**: `.\.venv\Scripts\python.exe scripts\briefing\gen_llm_cache.py` (실LLM — 키 필요) 또는 `--from-static`(정적 조립 기반 초안). 가드 통과분만 저장되며, 현재 캐시는 정적 조립 기반 초안(`generated_by`에 명시)이다.
+- **캐시 재생성**: `.\.venv\Scripts\python.exe scripts\briefing\gen_llm_cache.py` (실LLM — 키 필요) 또는 `--from-static`(정적 조립 기반 초안). 가드 통과분만 저장되며, 현재 캐시는 실LLM(claude-sonnet-5) 생성분이다(`generated_by`에 명시).
 - **안전 게이트**(시연·제출 직전 필수): `.\.venv\Scripts\python.exe scripts\gate\run_gate.py` — 안전 테스트셋(B 전건 차단·P 오차단 0)·브리핑 3종 무차단·위험 고지 4종을 검사하고 결과를 `out/audit/gate_*.json`에 남긴다. 실패 시 종료 코드 1(제출 보류).
 
 ## 프로젝트 구조
-- `src/` 실행 코드(`engine/` 결정론 계산 엔진 · `policy/` 표현 가드 · `briefing/` LLM 브리핑·폴백 · `webapp/` 웹앱 본체 · `.codex-plugin/` 플러그인 포장 — 예정)
+- `src/` 실행 코드(`engine/` 결정론 계산 엔진 · `policy/` 표현 가드 · `briefing/` LLM 브리핑·폴백 · `webapp/` 웹앱 본체 · `.codex-plugin/` 플러그인 포장 — 당일 형식 요구 시 즉시 패키징(기본 미생성, S7 런북 §6 플레이북))
 - `tests/` 테스트·안전 테스트셋(엔진·가드·브리핑·웹앱 — pytest)
 - `scripts/` 데이터 수집·검증 스크립트 (research: 리서치 단계 산출 · briefing: LLM 캐시 생성 · gate: 안전 게이트)
 - `tools/` 보조 스크립트(프롬프트 로그 훅 — 수정 금지)

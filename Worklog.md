@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0500-main · S7 — 제출 안전·산출물 정합(본선 공지 반영 재편)
+**요청** — "s7 진행 상세 계획 수립해줘 /brainstorming" → 브레인스토밍·플랜 승인 후 실행.
+**수행 작업** — 탐색(계약·플러그인 현황·오프라인/로그 3축 병렬) 중 본선 공지 발견 → 제출=브리프+로그·코드 제출 없음 확인 → S7 재편(D-0718-0500). C1 결과물 브리프 초안 4항목+구현 대조표(과장 제거). C2 로그 완전성 감사(JSONL 유효·비밀정보 0·서브에이전트 미포함 판정)+복사-전용 수집 스크립트 예행(12개·해시 일치). C3 오프라인/폴백 코드 증명(302 tests·게이트 cache)+시연·리허설 런북(시연 스크립트·물리 리허설 절차·즉시 패키징 플레이북·기록표). C4 안전 게이트+문서 정합(README 3곳·implementation-plan·validation-plan §6)+운영 로그.
+**변경 파일** — docs/submission/2026-07-18_{결과물브리프_초안,시연리허설_런북}.md(신규), scripts/submission/collect_logs.py(신규), out/submission/{log_audit.md,logs/}(Git 제외), README.md, docs/plans/{implementation-plan,validation-plan}.md, Decisionlog.md(D-0718-0500), Troubleshootinglog.md(T-0718-0500)
+**검증** — 정합 QA 통과(직전: 브리프·런북이 실제 라벨·골든값·계약과 일치; 직후: S8 전달물 4종 확보; 전체: 공지·헌법 §14·계획 3종 정합). pytest 302건 통과. 게이트 통과(gate_20260718_0500 — B27/27·P오차단0·브리핑 cache 3종 무차단·고지 4/4). 로그 감사: 12파일 JSONL 유효·비밀정보 0·무편집 복사 SHA-256 전건 일치. 캐시 원천 실LLM(claude-sonnet-5) 재확인(README 48행 정정).
+**판단 근거** — D-0718-0500(공지 우선·제출물 중심 재편·플러그인 즉시 패키징으로 무손실).
+**결과** — 완료(플러그인 실빌드·S6·S8 미착수 — 사용자 지시 대기). 미검증(✋ 사용자 물리 리허설): Wi-Fi 차단 완주 시간·백업 전환 30분 실측·노트북 배율(런북 기록표). 미확정: 서브에이전트 로그 미포함 — 다음 세션 Stop 후 재측정(T-0718-0500).
+
 ### W-0718-0414-main · 브리핑 생성 시점 분리 — 진입 지연 생성(D-0718-0355)
 **요청** — "브리핑이 진입 시점 생성인가 데모 시작 시 미리 생성인가? 진입 시점이 맞는 것 같다" → 진단 후 "live 모드로 시연할 거야. 수정하자".
 **수행 작업** — 진단: 현재 loadScenario(GET /api/scenario)가 브리핑을 미리 생성 → live 지연이 S0/전환마다 앞당겨짐. 수정: ① 계약 §9·스펙 §4 ② 선행(진입 지연 생성) ② app.py: _build_briefing 헬퍼 추출 + GET /api/briefing/{id} 신설 + /api/scenario에서 브리핑·guard·briefing_source 제거(meta·hold·past_records·buzz·diary_draft만) ③ app.js: btn-start → requestBriefing() 비동기 + goStep(1), renderStep2 로딩 방어, goStep(2)에 renderStep2 추가(진입 시 상태 반영 — 이 누락으로 로딩 미표시 결함 발견·수정) ④ 테스트 12건 이동(scenario briefing 단언 → /api/briefing, 카운터 집계 순서 재작성) ⑤ .env BRIEFING_MODE=cache→live 전환.
