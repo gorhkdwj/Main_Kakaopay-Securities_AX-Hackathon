@@ -204,6 +204,9 @@ def _compute_sell(
         "remaining_qty": remaining_qty,
         "remaining_weight_pct": remaining_weight_pct,
         "is_full_sell": qty == holding_qty,  # "보유 전량입니다" 라벨(계약 §5.3)
+        # 체결 후 평균 구매가 — 매도는 평균 구매가를 바꾸지 않는다(계약 §5.1).
+        # 잔여 보유가 있으면 기존 값 유지, 전량 매도면 잔여 없음(None).
+        "avg_price_after": None if qty == holding_qty else avg_price,
         "settlement_date": settle_date(trade_date_iso, 2),  # D+2(토·일 제외)
     }
 
@@ -213,11 +216,20 @@ def _compute_buy(
     price: int,
     cash: int,
     trade_date: "str | datetime.date",
+    holding_qty: int = 0,
+    avg_price: "int | None" = None,
 ) -> dict:
-    """매수 미리보기 순수 계산(검증 포함, ID 미발급). 골든값: 계약 §5.2-c."""
+    """매수 미리보기 순수 계산(검증 포함, ID 미발급). 골든값: 계약 §5.2-c.
+
+    holding_qty·avg_price는 '체결 후 평균 구매가(예상)' 계산용(계약 §5.1 —
+    사용자 요청 2026-07-18). 보유 0이면 평균 구매가 = 기준가.
+    """
     _validate_qty(qty)
     _validate_int(price, "price(기준가)")
     _validate_int(cash, "cash(가용 예수금)", minimum=0)
+    _validate_int(holding_qty, "holding_qty(보유수량)", minimum=0)
+    if holding_qty > 0:
+        _validate_int(avg_price, "avg_price(평균 구매가)")
     trade_date_iso = _validate_trade_date(trade_date)
 
     gross = price * qty                     # 매수대금
@@ -231,6 +243,8 @@ def _compute_buy(
     remaining_cash = cash - total_cost      # 잔여 예수금
     # 매수 후 비중 분모 = 매수 전 예수금 총액 고정(계약 §4) / 분자 = 매수 후 평가액
     weight_after_pct = _pct(gross, cash)
+    # 체결 후 평균 구매가(예상) — 순수 매입가 기준(수수료 미포함)·원 미만 절사(계약 §5.1)
+    avg_price_after = (holding_qty * (avg_price or 0) + gross) // (holding_qty + qty)
 
     return {
         "type": "buy_preview",
@@ -239,6 +253,8 @@ def _compute_buy(
             "price": price,
             "cash": cash,
             "trade_date": trade_date_iso,
+            "holding_qty": holding_qty,
+            "avg_price": avg_price,
         },
         "gross_amount": gross,
         "fee": fee,
@@ -248,6 +264,7 @@ def _compute_buy(
         "weight_after_pct": weight_after_pct,
         # 집중도 경고: >40% 초과 시 True — 차단이 아니라 정보 표시(계약 §5.3)
         "concentration_warning": weight_after_pct > CONCENTRATION_WARNING_PCT,
+        "avg_price_after": avg_price_after,  # 체결 후 평균 구매가(예상 — 계약 §5.1)
         "settlement_date": settle_date(trade_date_iso, 2),  # D+2(토·일 제외)
     }
 
@@ -301,6 +318,8 @@ def buy_preview(
     price: int,
     cash: int,
     trade_date: "str | datetime.date",
+    holding_qty: int = 0,
+    avg_price: "int | None" = None,
 ) -> dict:
     """매수 주문 미리보기를 계산한다(계약 §5 — 골든값 §5.2-c).
 
@@ -312,6 +331,8 @@ def buy_preview(
         price: 기준가(원).
         cash: 가용 예수금(원) — 매수 한도 검증·매수 후 비중의 고정 분모.
         trade_date: 체결 기준일("YYYY-MM-DD" 또는 date).
+        holding_qty: 기존 보유수량(주, 기본 0) — 체결 후 평균 구매가 계산용(§5.1).
+        avg_price: 기존 평균 구매가(원) — holding_qty>0일 때 필수.
 
     Returns:
         JSON 직렬화 가능한 dict:
@@ -320,6 +341,7 @@ def buy_preview(
          total_cost(총 결제예정액), remaining_cash(잔여 예수금),
          weight_after_pct(매수 후 비중 %),
          concentration_warning(비중>40% 시 True — 차단 아닌 정보),
+         avg_price_after(체결 후 평균 구매가 — §5.1),
          settlement_date(결제일 D+2)}
 
     Raises:
@@ -328,7 +350,7 @@ def buy_preview(
         EngineInputError: 그 외 입력 형식 오류.
         (오류 시 계산 결과·calculation_id를 생성하지 않는다 — 계약 §5.3)
     """
-    result = _compute_buy(qty, price, cash, trade_date)
+    result = _compute_buy(qty, price, cash, trade_date, holding_qty, avg_price)
     return {"calculation_id": _next_calculation_id(), **result}
 
 

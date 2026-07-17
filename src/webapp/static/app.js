@@ -526,6 +526,9 @@ function renderStep4() {
       <tr><td>확정 손익</td><td>0원(평가손익 ${hold ? pnlMoney(hold.eval_pnl) : "—"} 유지)</td>
           <td>${pv ? pnlMoney(pv.realized_pnl) : "—"}</td><td>${fv ? pnlMoney(fv.realized_pnl) : "—"}</td></tr>
       <tr><td>잔여 수량</td><td>${num(holdingQty())}주</td><td>${pv ? num(pv.remaining_qty) + "주" : "—"}</td><td>${fv ? num(fv.remaining_qty) + "주" : "—"}</td></tr>
+      <tr><td>체결 후 평균 구매가</td><td>${won(m.holding.avg_price)}</td>
+          <td>${pv ? won(pv.avg_price_after) + " (변동 없음)" : "—"}</td>
+          <td>${fv ? "— (잔여 없음)" : "—"}</td></tr>
       <tr><td>남는 비중</td><td>${hold ? hold.weight_pct.toFixed(1) + "%" : "—"}</td>
           <td>${pv ? pv.remaining_weight_pct.toFixed(1) + "%" : "—"}</td><td>${fv ? fv.remaining_weight_pct.toFixed(1) + "%" : "—"}</td></tr>
       <tr><td>출금 가능일</td><td>—</td><td>${pv ? dateLabel(pv.settlement_date) : "—"}</td><td>${fv ? dateLabel(fv.settlement_date) : "—"}</td></tr>
@@ -552,6 +555,8 @@ function renderStep4() {
       <tr><td>잔여 예수금</td><td>${av ? won(av.remaining_cash) : "—"}</td><td>${bv ? won(bv.remaining_cash) : "—"}</td></tr>
       <tr><td>구매 후 비중</td><td>${av ? av.weight_after_pct.toFixed(1) + "%" + warnBadge(av) : "—"}</td>
           <td>${bv ? bv.weight_after_pct.toFixed(1) + "%" + warnBadge(bv) : "—"}</td></tr>
+      <tr><td>체결 후 평균 구매가</td><td>${av ? won(av.avg_price_after) : "—"}</td>
+          <td>${bv ? won(bv.avg_price_after) : "—"}</td></tr>
       <tr><td>결제일</td><td>${av ? dateLabel(av.settlement_date) : "—"}</td><td>${bv ? dateLabel(bv.settlement_date) : "—"}</td></tr>
     </table></div>` +
     ((av && av.concentration_warning) || (bv && bv.concentration_warning)

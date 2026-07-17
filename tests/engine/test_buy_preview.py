@@ -96,3 +96,46 @@ class TestBuyDeterminismAndSerialization:
         r = buy_preview(qty=10, **FIRST_BUY)
         restored = json.loads(json.dumps(r, ensure_ascii=False))
         assert restored == r
+
+
+class TestAvgPriceAfter:
+    """체결 후 평균 구매가(계약 §5.1 — 사용자 요청 2026-07-18, D-0718-0255 후속).
+
+    순수 매입가 기준(수수료 미포함)·원 미만 절사. 보유 0이면 = 기준가.
+    """
+
+    def test_first_buy_no_holding_equals_price(self):
+        r = buy_preview(qty=10, **FIRST_BUY)
+        assert r["avg_price_after"] == 46_000
+        assert r["inputs"]["holding_qty"] == 0
+
+    def test_loss8_holding_10_shares(self):
+        # (30×50,000 + 460,000) ÷ 40 = 49,000 (정확)
+        r = buy_preview(qty=10, holding_qty=30, avg_price=50_000, **FIRST_BUY)
+        assert r["avg_price_after"] == 49_000
+
+    def test_loss8_holding_8_shares_floor(self):
+        # (1,500,000 + 368,000) ÷ 38 = 49,157.89… → 49,157 (절사)
+        r = buy_preview(qty=8, holding_qty=30, avg_price=50_000, **FIRST_BUY)
+        assert r["avg_price_after"] == 49_157
+
+    def test_profit15_holding_10_shares(self):
+        # (20×40,000 + 460,000) ÷ 30 = 42,000 (정확)
+        r = buy_preview(qty=10, holding_qty=20, avg_price=40_000, **FIRST_BUY)
+        assert r["avg_price_after"] == 42_000
+
+    def test_holding_requires_avg_price(self):
+        from src.engine import EngineInputError
+
+        with pytest.raises(EngineInputError):
+            buy_preview(qty=10, holding_qty=30, avg_price=None, **FIRST_BUY)
+
+
+def test_sell_avg_price_unchanged_and_full_sell_none():
+    """매도는 평균 구매가를 바꾸지 않는다(계약 §5.1) — 전량 매도는 잔여 없음."""
+    from src.engine import sell_preview
+
+    partial = sell_preview(10, 46_000, 50_000, 30, 4_900_000, "2026-07-17")
+    assert partial["avg_price_after"] == 50_000
+    full = sell_preview(30, 46_000, 50_000, 30, 4_900_000, "2026-07-17")
+    assert full["avg_price_after"] is None
