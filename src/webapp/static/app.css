@@ -303,6 +303,12 @@ textarea { resize: vertical; }
    ID 선택자의 display:flex가 UA의 [hidden]{display:none}을 이겨
    모달이 닫히지 않던 버그(T-0716-1510) 재발 방지 */
 [hidden] { display: none !important; }
+/* 모달 등장 모션(절제 — §14 게임화 아님, prefers-reduced-motion 전역 규칙이 무효화) */
+@keyframes dim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+#sheet-backdrop:not([hidden]), #intercept-backdrop:not([hidden]) { animation: dim-in .18s ease-out; }
+#sheet-backdrop:not([hidden]) > #order-sheet,
+#intercept-backdrop:not([hidden]) > #intercept-sheet { animation: modal-in .22s cubic-bezier(.2, .8, .3, 1); }
 #order-sheet, #intercept-sheet {
   width: 100%; max-width: 430px;
   background: var(--bg); border-radius: var(--r-sheet);

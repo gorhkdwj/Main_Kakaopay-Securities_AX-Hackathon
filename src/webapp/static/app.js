@@ -310,12 +310,16 @@ function replicaChartSvg(changePct) {
     : changePct > 0 ? down.split(" ").map(p => { const [x, y] = p.split(","); return `${x},${120 - y}`; }).join(" ")
     : flat;
   const color = changePct < 0 ? "var(--down)" : changePct > 0 ? "var(--up)" : "var(--flat)";
-  return `<div class="kp-chart" aria-hidden="true"><svg viewBox="0 0 360 120" preserveAspectRatio="none">
+  // 현재가 지점 dot + halo(실앱 차트 종점 표시 — 스펙 §2.5)
+  const [lx, ly] = pts.trim().split(" ").pop().split(",");
+  return `<div class="kp-chart" aria-hidden="true"><svg viewBox="0 0 360 120" preserveAspectRatio="none" style="overflow:visible">
     <line x1="0" y1="30" x2="360" y2="30" stroke="#f2f4f6" stroke-width="1"/>
     <line x1="0" y1="60" x2="360" y2="60" stroke="#f2f4f6" stroke-width="1"/>
     <line x1="0" y1="90" x2="360" y2="90" stroke="#f2f4f6" stroke-width="1"/>
     <polyline points="${pts} 360,120 0,120" fill="${color}" opacity=".05" stroke="none"/>
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lx}" cy="${ly}" r="10" fill="none" stroke="${color}" stroke-opacity=".3" stroke-width="1.5"/>
+    <circle cx="${lx}" cy="${ly}" r="4" fill="${color}"/>
   </svg></div>`;
 }
 
