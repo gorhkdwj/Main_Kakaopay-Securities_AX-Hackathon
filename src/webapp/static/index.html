@@ -161,16 +161,17 @@
     </div>
     <div id="s6-result"></div>
 
-    <!-- 실앱 스타일 바텀시트(재확인 — 필수 고지 4종) -->
+    <!-- 주문 확인 모달(중앙 — 필수 고지 4종 + 비가역 확인 체크, D-0718-0548) -->
     <div id="sheet-backdrop" hidden>
-      <div id="order-sheet" role="dialog" aria-modal="true" aria-label="주문 재확인 바텀시트">
+      <div id="order-sheet" role="dialog" aria-modal="true" aria-label="주문 재확인">
         <h3>제출 전 마지막 확인이에요</h3>
         <div id="sheet-rows"></div>
         <div id="sheet-notices"></div>
-        <label class="confirm-label" for="confirm-qty">수량을 다시 입력해 확인해 주세요</label>
-        <input id="confirm-qty" type="number" inputmode="numeric" aria-label="확인 수량 입력">
+        <label class="confirm-check" for="confirm-ack">
+          <input type="checkbox" id="confirm-ack"> 위 고지를 확인했고, 체결 후 취소할 수 없음을 이해했어요.
+        </label>
         <p id="sheet-error" class="err-text" hidden></p>
-        <button id="btn-settle" class="btn exec" data-role="order-execute" type="button">모의 체결하기</button>
+        <button id="btn-settle" class="btn exec" data-role="order-execute" type="button" disabled>모의 체결하기</button>
         <button id="btn-sheet-back" class="btn ghost" type="button">돌아가기</button>
       </div>
     </div>

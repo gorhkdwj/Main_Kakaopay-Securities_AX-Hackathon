@@ -754,13 +754,13 @@ function openSheet() {
   el("sheet-notices").innerHTML = notices.map((t, i) =>
     `<div class="notice-item"><span class="no">고지 ${i + 1}</span>${t}</div>`).join("");
 
-  el("confirm-qty").value = v.inputs.qty;
+  el("confirm-ack").checked = false;
   el("sheet-error").hidden = true;
   const btn = el("btn-settle");
   btn.textContent = sideSell ? "모의 판매 체결하기" : "모의 구매 체결하기";
   btn.classList.toggle("side-sell", sideSell);
   btn.classList.toggle("side-buy", !sideSell);
-  btn.disabled = false;
+  btn.disabled = true;   // 비가역 확인 체크 전까지 비활성
   el("sheet-backdrop").hidden = false;
 }
 async function doSettle() {
@@ -768,17 +768,15 @@ async function doSettle() {
   if (!plan) return;
   const slot = S.previews[plan.key];
   if (!slot || !slot.preview) return;
-  const raw = el("confirm-qty").value;
-  if (raw === "") {
+  if (!el("confirm-ack").checked) {
     el("sheet-error").hidden = false;
-    el("sheet-error").textContent = "확인 수량을 입력해 주세요.";
+    el("sheet-error").textContent = "체결 전에 확인 항목에 체크해 주세요.";
     return;
   }
-  const confirmed = Number(raw);
   const r = await api("/api/settle", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ scenario_id: S.scenarioId, preview: slot.preview, confirmed_qty: confirmed }),
+    body: JSON.stringify({ scenario_id: S.scenarioId, preview: slot.preview, confirmed_qty: slot.preview.inputs.qty }),
   });
   if (r.body && r.body.ok) {
     S.settlement = r.body.settlement;
@@ -977,6 +975,10 @@ function wireEvents() {
   el("btn-open-sheet").addEventListener("click", openSheet);
   el("btn-sheet-back").addEventListener("click", () => { el("sheet-backdrop").hidden = true; });
   el("btn-settle").addEventListener("click", doSettle);
+  el("confirm-ack").addEventListener("change", (e) => {
+    el("btn-settle").disabled = !e.target.checked;
+    if (e.target.checked) el("sheet-error").hidden = true;
+  });
   el("btn-skip-order").addEventListener("click", () => goStep(7));
   el("btn-save-record").addEventListener("click", saveRecord);
   el("btn-safe-exit").addEventListener("click", () => {

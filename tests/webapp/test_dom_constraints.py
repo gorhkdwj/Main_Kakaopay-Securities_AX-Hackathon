@@ -57,7 +57,8 @@ def test_step6_has_mock_bar_and_notices_skeleton():
     assert "모의 주문 — 실제 거래 아님" in html  # 상단 고정 바
     sec6 = section_slice(html, "step-6")
     assert "돌아가기" in sec6  # 취소·돌아가기 = 진행과 동일 위계(버튼 존재)
-    assert 'id="confirm-qty"' in sec6  # 재확인 수량 입력
+    assert 'id="confirm-ack"' in sec6  # 비가역 확인 체크(재확인 관문 — D-0718-0548)
+    assert 'id="btn-settle"' in sec6 and "disabled" in sec6  # 체크 전 체결 버튼 비활성
 
 
 # ---------------------------------------------------------------------------

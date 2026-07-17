@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0548-main · ⑥ 모의 체결 재확인 완화 + 중앙 모달(데모 최종 수정)
+**요청** — ⑥ 확인 시트 관련 사용자 지적 2건: (1) 팝업 중앙 이동 (2) "수량 재입력"이 값 재계산이 안 됨 — 의도인지·왜 필요한지. 답변 후 "모의 체결에 과한 마찰 아닌가" 재질문 → 권장안(중간) 선택("권장으로 수정").
+**수행 작업** — 헌법 §5 순서: ① s4-ui-spec ⑥·Decisionlog(D-0718-0548) 선행 갱신 ② 코드: index.html(#order-sheet confirm-qty 입력 제거 → confirm-ack "비가역 확인" 체크 + btn-settle 기본 disabled·aria "바텀시트"→"주문 재확인"), app.css(#sheet-backdrop 중앙 정렬·#order-sheet 전 모서리 radius·.confirm-check), app.js(openSheet: confirm-ack 리셋·버튼 비활성 / doSettle: 체크 확인·confirmed_qty=preview.inputs.qty 자동 전달 / ack change 핸들러) ③ test_dom_constraints(confirm-qty→confirm-ack·disabled) ④ 런북 §4. settle.py·계약 §9 고지·게이트 분모 불변.
+**변경 파일** — docs/plans/s4-ui-spec.md, Decisionlog.md(D-0718-0548), src/webapp/static/{index.html,app.css,app.js}, tests/webapp/test_dom_constraints.py, docs/submission/2026-07-18_시연리허설_런북.md
+**검증** — 정합 QA 통과(직전: 고지 4종·confirmed_qty 대조 불변 / 직후: settle 골든 불변 / 전체: 계약 §9·게이트 분모 불변). pytest 302 통과·게이트 통과(gate_20260718_0554, 고지 4/4). **playwright 실브라우저(9200·cache) 양방향**: ⑥ 시트 backdrop align-items=center·order-sheet radius 18/18(중앙 모달), 체크 전 btn-settle disabled, confirm-ack 존재·confirm-qty 없음, 고지 4종, 체크→활성→체결(매도 net 459,011·매수 cost 460,069 골든 일치·is_mock), 시트 닫힘, 콘솔 오류 0.
+**판단 근거** — D-0718-0548(모의 체결의 실주문용 재입력 마찰 과함 → 비가역 확인 체크로 완화, 무결성은 settle_order 재계산이 담당).
+**결과** — 완료. 미커밋(사용자 검토 대기). 서버 포트: 8765가 OS 예약 범위(8687–8786)라 범위 밖 포트 사용(T-0717-2031).
+
 ### W-0718-0500-main · S7 — 제출 안전·산출물 정합(본선 공지 반영 재편)
 **요청** — "s7 진행 상세 계획 수립해줘 /brainstorming" → 브레인스토밍·플랜 승인 후 실행.
 **수행 작업** — 탐색(계약·플러그인 현황·오프라인/로그 3축 병렬) 중 본선 공지 발견 → 제출=브리프+로그·코드 제출 없음 확인 → S7 재편(D-0718-0500). C1 결과물 브리프 초안 4항목+구현 대조표(과장 제거). C2 로그 완전성 감사(JSONL 유효·비밀정보 0·서브에이전트 미포함 판정)+복사-전용 수집 스크립트 예행(12개·해시 일치). C3 오프라인/폴백 코드 증명(302 tests·게이트 cache)+시연·리허설 런북(시연 스크립트·물리 리허설 절차·즉시 패키징 플레이북·기록표). C4 안전 게이트+문서 정합(README 3곳·implementation-plan·validation-plan §6)+운영 로그.
