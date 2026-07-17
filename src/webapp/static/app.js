@@ -168,6 +168,11 @@ function goStep(n) {
   S.step = Math.max(0, Math.min(8, n));
   // S0 진입 = "주문 버튼을 누른 순간"의 재현 — 인터셉트 팝업 자동 제시(계약 §9 상시 인터셉트)
   if (S.step === 0) openIntercept(); else closeIntercept();
+  if (S.data) {
+    // ⑦·⑧은 ⑤ 일지·재검토 입력을 인용하므로 진입 시점 값으로 재렌더(스테일 방지)
+    if (S.step === 7) renderStep7();
+    if (S.step === 8) renderStep8();
+  }
   renderChrome();
   window.scrollTo({ top: 0 });
 }
@@ -658,8 +663,7 @@ function renderSettleResult() {
       ? `예상 수령 ${won(st.net_proceeds)} · 출금 가능일 ${dateLabel(st.settlement_date)}`
       : `총 결제 ${won(st.total_cost)} · 결제일 ${dateLabel(st.settlement_date)}`}
     <div class="meta"><span>${esc(st.calculation_id)}</span><span>${esc(st.settled_at)}</span><span>모의 여부: 항상 예</span></div>
-  </div>
-  <button class="btn dark" type="button" onclick="goStep(7)">회고로 이동하기</button>`;
+  </div>`;
 }
 
 /* ⑦ 사후 회고 + 기록 저장 */
@@ -729,10 +733,19 @@ async function saveRecord() {
   }
 }
 
-/* ⑧ 주문 화면(실앱 재현·종착 — 계약 §9): 버튼 전부 disabled·배선 없음(재인터셉트 없음) */
+/* ⑧ 주문 화면(실앱 재현·종착 — 계약 §9): 버튼 전부 disabled·배선 없음(재인터셉트 없음).
+   브리핑 재진입 배너 대신 '내 판단 기록 상기' 카드 — 주문 직전에 내 일지를 다시 본다. */
 function renderStep8() {
   renderOrderReplica("s8");
   const st = S.settlement;
+  const chosen = st ? (S.settledIntent || S.intent) : S.intent;
+  const review = el("retro-input").value.trim();
+  const diary = S.diaryText.trim();
+  el("s8-judgment").innerHTML = diary ? `<div class="kcard quote">
+      <div class="tag fact">내 판단 기록 — 주문 전에 다시 봐요</div>
+      <div>“${esc(diary)}”</div>
+      <div class="meta"><span>선택: ${esc(chosen || "선택 없음")}</span>${review ? `<span>다음 재검토: ${esc(review)}</span>` : ""}</div>
+    </div>` : `<div class="kcard state">이번 주문에는 아직 투자 일지가 없어요.</div>`;
   el("s8-handoff").innerHTML = st ? `<div class="kcard state">
     모의 체결 기록: ${st.side === "sell" ? "판매" : "구매"} ${num(st.qty)}주 · ${won(st.price)} — 실제 거래 아님</div>` : "";
 }
@@ -825,7 +838,6 @@ function wireEvents() {
     el("demo-safemode").checked = false; // 버튼 해제는 change 이벤트가 없으므로 수동 동기화
     toggleSafemode(false);
   });
-  el("s8-briefing-entry").addEventListener("click", () => goStep(1)); // ⑧ 앞 연결(레이어 진입 재현)
 
   el("demo-toggle").addEventListener("click", () => {
     const panel = el("demo-panel");
@@ -843,7 +855,7 @@ function wireEvents() {
 }
 
 /* ── 시작 ─────────────────────────────────────────────── */
-window.goStep = goStep; // 결과 카드 내 버튼에서 사용
+window.goStep = goStep; // 시연 검증(playwright)·콘솔 진단에서 사용
 document.addEventListener("DOMContentLoaded", () => {
   wireEvents();
   loadScenarioList();

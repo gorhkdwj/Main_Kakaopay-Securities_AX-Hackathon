@@ -180,9 +180,10 @@ def test_step8_replica_is_non_functional():
     js = read_static("app.js")
     sec8 = section_slice(html, "step-8")
 
-    # 재현 라벨(시연용 안전 표기 — 계약 §9) + 앞 연결 배너
+    # 재현 라벨(시연용 안전 표기 — 계약 §9) + 내 판단 기록 상기 카드(브리핑 재진입 배너 금지)
     assert "실앱 주문 화면 재현(시연용)" in sec8
-    assert 'id="s8-briefing-entry"' in sec8
+    assert 'id="s8-judgment"' in sec8
+    assert "s8-briefing-entry" not in sec8  # 재수행 유도 배너 제거(사용자 지적 2026-07-17)
 
     # 주문 버튼 2종(탭 없음 — 버튼과 중복이라 제거): disabled + JS 클릭 배선 부재
     for bid in ("s8-order-buy", "s8-order-sell"):
