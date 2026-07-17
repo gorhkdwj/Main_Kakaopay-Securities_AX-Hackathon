@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0238-main · 완전 양방향 흐름 구현 완료(D-0718-0225 — 계획 대비 조기 완료)
+**요청** — "완전 양방향 흐름으로 진행하자. 계획을 세워봐."(플랜 모드 승인 후 실행).
+**수행 작업** — 4커밋: ① B0 문서 선행(계약 §3.1 cash 전 시나리오 1,000,000·ptv 현금 포함 재구성 해석·§4 K2 주석·§9 방향별 4버튼/고지 방향화·§10·§12, 스펙 ④⑤⑥, validation I-01, D-0718-0225) ② B1 fixture 2종 cash 변경 + 테스트 정합(fixture_alignment·records_and_errors qty 22 치환) + loss8 구매 흐름 통합 테스트 신규 ③ B2 캐시 2종 실LLM 재생성(지문 갱신) ④ B3 app.js flowSide: S 상태 신설·loadScenario 초기화(meta.side 기본)·setFlowSide(같은 방향 no-op·전환 시 intent/settlement/settledIntent/savedRecord 리셋→renderAll→팝업·보유 0 판매 클릭은 사실 안내 #itc-side-note)·side 파생 7지점 치환·미리보기 4슬롯 선취득·S0 팝업 카드 보유 유무 기준+예수금 병기·DOM 배선 단언 갱신. 서버·엔진·가드 무변경(설계 검증 확인).
+**변경 파일** — docs/requirements-contract.md, docs/plans/{s4-ui-spec,validation-plan}.md, data/fixtures/scenario_{loss8,profit15}.json, data/fixtures/llm_cache/*(2종), src/webapp/static/{app.js,index.html}, tests/engine/test_fixture_alignment.py, tests/webapp/{test_records_and_errors,test_integration_flows,test_dom_constraints}.py, Decisionlog.md(D-0718-0225-main)
+**검증** — pytest 290건 전체 통과(신규 loss8 구매 통합 포함 — 매수 골든 §5.2-c 공유 확인: 8주 368,055/10주 460,069·46.0% 경고, 매도 골든 불변). playwright 실브라우저 완주: [구매하기] 진입→팝업(보유 카드+예수금 병기)→③ 구매 체크리스트→④ 8/10주 비교(집중도 경고)→⑤ 구매 4택→⑥ 구매 체결(고지 4종 구매판·세금 없음)→⑦ 일지 저장→⑧ 판단 기록 카드("선택: 10주 구매 검토") → 처음으로→[판매하기] 전환(의향·체결 리셋 확인)→판매 체결 회귀(459,011) → first_buy 판매 클릭 안내("판매할 보유 수량이 없어요")·구매 클릭 시 안내 소거, 콘솔 오류·경고 0. 안전 게이트 통과(gate_20260718_0238).
+**판단 근거** — D-0718-0225-main. 시간 박스 2.5h 대비 실소요 약 13분(첫 커밋 02:25→검증 종료 02:38) — first_buy의 기존 buy 흐름 재사용과 골든값 공유 덕.
+**결과** — 완료. 이제 세 시나리오 모두에서 진입 클릭(구매/판매)이 검토·계산·체결 흐름의 방향을 결정. 시연 대본 유의: 주 동선은 판매 완주, 구매 진입은 차별 포인트 시연·Q&A 대응. 다음: S7(오프라인 리허설·로그 수집 예행).
+
 ### W-0718-0217-main · S0 인터셉트 클릭 발동 + 중앙 모달 전환(D-0718-0210)
 **요청** — "첫 실행부터 팝업이 뜬 채 시작되는데 구매/판매를 누르면 뜨도록 변경 + 팝업은 하단이 아니라 화면 중앙에".
 **수행 작업** — 계약 §9·스펙 §0/§4·project-plan §3.1·validation-plan I-01 선행 갱신(자동 열림 → 클릭 발동·중앙 모달 — D-0717-2121 부분 수정) 후 구현: app.js에서 자동 열림 2곳 제거(loadScenario 말미·goStep의 S0 분기 — 이제 goStep은 팝업을 항상 닫고 발동은 S0 구매/판매 클릭이 유일), app.css에서 #intercept-backdrop 중앙 정렬 분리(#sheet-backdrop 하단 유지 — ⑥은 실앱 바텀시트 계승) + 모달 룩(전체 둥근 모서리·max-height 스크롤).
