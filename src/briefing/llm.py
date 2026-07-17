@@ -60,10 +60,13 @@ VALID_MODES = ("auto", "live", "cache", "static")
 DEFAULT_MODEL = "claude-sonnet-5"
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
-#: 앱 내 live 시도 타임아웃 — 시연 중 화면 지연 상한(초과 시 즉시 캐시 폴백).
-#: 캐시 생성 스크립트는 별도로 긴 타임아웃을 넘긴다.
+#: auto 모드 live 시도 타임아웃 — 시연 중 화면 지연 상한(초과 시 즉시 캐시 폴백).
+#: 실측(2026-07-17, T-0717-2340): 브리핑 1건 생성에 sonnet-5·haiku 모두 10초대
+#: — auto는 8초에 빠르게 강등하고, live 모드(명시적 의도)만 30초까지 기다린다.
 DEFAULT_TIMEOUT_SECONDS = 8.0
-MAX_OUTPUT_TOKENS = 2000
+LIVE_MODE_TIMEOUT_SECONDS = 30.0
+#: 응답 출력 상한 — 2000에서는 sonnet-5의 한국어 JSON이 중간에 잘렸다(실측).
+MAX_OUTPUT_TOKENS = 4000
 
 #: 계약 §9 — 브리핑 원천 배지 라벨(화면 표기)
 SOURCE_LABELS = {
@@ -195,9 +198,11 @@ def call_anthropic(messages: list, *, timeout: "float | None" = None) -> str:
             "content-type": "application/json",
         },
         json={
+            # temperature는 넣지 않는다 — claude-sonnet-5가 deprecated로 거부
+            # (400 invalid_request_error, 실호출 검증 2026-07-17). 출력 안정성은
+            # 프롬프트의 JSON 계약·guard 관문이 담당한다.
             "model": _env("ANTHROPIC_MODEL") or DEFAULT_MODEL,
             "max_tokens": MAX_OUTPUT_TOKENS,
-            "temperature": 0.2,
             "system": system_text,
             "messages": chat_messages,
         },
@@ -264,8 +269,15 @@ def generate_briefing(fx: dict, *, mode: str = "auto",
             attempts.append("live_skipped(no_api_key)")
         else:
             try:
-                caller = llm_call or call_anthropic
-                raw = caller(build_messages(fx, price_source_id))
+                messages = build_messages(fx, price_source_id)
+                if llm_call is not None:
+                    raw = llm_call(messages)
+                else:
+                    # live 강제 모드는 명시적 의도이므로 길게 기다리고,
+                    # auto는 8초에 강등한다(시연 화면 지연 상한 — 실측 근거 위 상수).
+                    timeout = (LIVE_MODE_TIMEOUT_SECONDS if mode == "live"
+                               else DEFAULT_TIMEOUT_SECONDS)
+                    raw = call_anthropic(messages, timeout=timeout)
                 response = parse_llm_json(raw)
                 attempts.append("live_ok")
                 return response, "live", attempts

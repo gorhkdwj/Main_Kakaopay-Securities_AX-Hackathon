@@ -58,3 +58,10 @@
 **확인된 원인** — `netstat`상 8765 리스너 없음(충돌 아님). `netsh interface ipv4 show excludedportrange`로 확인: **8765가 예약 범위 8687–8786에 포함**(8766도 동일 범위). 재부팅 후 Hyper-V/WSL(winnat)의 동적 포트 예약 범위가 이동해 전날 정상이던 포트가 차단된 것 — 예약 범위는 부팅마다 달라질 수 있음.
 **조치(최종 해결)** — 범위 밖 후보(9000·8917·8560) bind 검증 → **9000에서 uvicorn 실기동·HTTP 200·/api/scenarios 정상 응답 확인** 후 검증 프로세스 종료. README 실행 방법에 10013 진단·대체 포트·영구 예약 절차(관리자: winnat 정지 → `add excludedportrange` 8765 → 재시작) 추가.
 **재발 방지** — ① **본선 당일 기동 절차에 "10013 시 excludedportrange 확인 → 범위 밖 포트" 포함**(포트 번호는 관례일 뿐 데모 동작·테스트와 무관) ② 리허설(S7) 체크리스트에 재부팅 직후 기동 확인 1회 추가 권고.
+
+### T-0717-2340-main · Claude 실호출 3연속 실패 — temperature 거부·JSON 잘림·타임아웃 실측
+**발생 상황** — 사용자 키 설정 직후 라이브 브리핑 검증(scenario_loss8, claude-sonnet-5).
+**증상** — ① 1차: HTTP 400 `invalid_request_error` — "`temperature` is deprecated for this model"(0.7초 즉시 거부) ② 2차(temperature 제거 후): 8초 ReadTimeout → 캐시 폴백 ③ 3차(타임아웃 90초): 응답은 왔으나 JSON 파싱 실패(Unterminated string, char 1210) — max_tokens=2000 상한에서 한국어 JSON이 중간 절단. 참고 실측: haiku-4-5는 9.9초에 완주.
+**확인된 원인** — ① claude-sonnet-5가 temperature 파라미터를 deprecated로 거부(구모델 관례를 그대로 이식한 코드 결함) ② 브리핑 1건 생성 실소요가 10~22초로 앱 내 8초 타임아웃 상한 초과 ③ 출력 상한 2000토큰이 실제 응답 길이(한국어 facts 6건+해석+질문)보다 작음. (불확실점: 소요 시간은 네트워크·부하에 따라 변동 — 22.3초는 1회 실측값)
+**조치** — ① temperature 파라미터 제거(출력 안정성은 프롬프트 JSON 계약+guard가 담당) ② MAX_OUTPUT_TOKENS 2000→4000 ③ 타임아웃 이원화: auto=8초(시연 화면 빠른 강등 유지)·live 강제 모드=30초(명시적 의도는 기다림). 최종 해결: live 모드 22.3초 성공, guard 차단 0·경고 0, 288 tests·게이트 통과.
+**재발 방지** — 실호출 검증 없이 API 파라미터를 가정하지 않는다(모델 교체 시 1회 실호출 스모크 필수 — llm.py 상수에 실측 근거 주석 명기). auto 모드가 키 존재 시 매 로드 8초를 소모하는 구조이므로 시연 기본은 캐시 경로를 권장(BRIEFING_MODE=cache), 라이브는 의도적 시연에서만.

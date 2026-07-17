@@ -15,6 +15,14 @@
 
 ---
 
+### W-0717-2347-main · Claude 라이브 실호출 검증 성공(3결함 수정 — T-0717-2340)
+**요청** — "api키 넣었음. 이제 테스트 해볼래?".
+**수행 작업** — ① 키 배치 안전 확인(마스킹 검사: `.env`에만 존재·추적 파일 `.env.example`은 깨끗·git check-ignore 통과) ② 실호출 3연속 실패를 순차 진단·수정(T-0717-2340: temperature 파라미터 거부→제거 / max_tokens 2000 절단→4000 / 실소요 10~22초 실측→타임아웃 이원화 auto 8초·live 30초) ③ 최종 검증: live 모드 22.3초 성공 — guard(숫자 대사·출처 실재 포함) 차단 0·경고 0, 양면 해석·구체적 unknowns 3건·쉬운 해요체 확인.
+**변경 파일** — src/briefing/llm.py, Troubleshootinglog.md(T-0717-2340-main), Worklog.md
+**검증** — pytest 288건 전체 통과, 안전 게이트 통과. 라이브 응답 품질 관찰(개선 후보 — 미조치): facts의 보유·계획 항목에 시세 출처(DEMO-SRC-102)를 확장 귀속, interpretations.basis에 source_id 대신 필드 경로 기입(화면 미표시라 무해, guard 스키마는 통과) — 캐시 실생성 결정 시 프롬프트 보강과 함께 다룰 것.
+**판단 근거** — 모델 교체 후 실호출 스모크는 필수(가정 금지 — T-로그 재발 방지 항목).
+**결과** — 완료. 라이브 경로 실검증 종료. 남은 결정(사용자): 캐시 실생성 여부 — 실LLM 캐시는 기존 웹앱 테스트의 문구 단언과 충돌하므로 테스트 전략 조정(콘텐츠 골든 단언은 static 경로로 이동)이 동반되어야 함. 시연 기본 모드 권장: BRIEFING_MODE=cache(8초 지연 회피).
+
 ### W-0717-2337-main · .env 템플릿 생성(.env.example + 로컬 .env 복사)
 **요청** — "일단 env 파일 템플릿만 만들어줘".
 **수행 작업** — `.env.example` 생성(ANTHROPIC_API_KEY 빈 값 + 선택 변수 ANTHROPIC_MODEL·BRIEFING_MODE 주석 + 헌법 §7 경고) 후 로컬 `.env`로 복사. `.gitignore`는 기존 패턴(`.env` 제외·`!.env.example` 추적) 그대로 사용. README 라이브 모드 절을 템플릿 복사 방식으로 갱신.
