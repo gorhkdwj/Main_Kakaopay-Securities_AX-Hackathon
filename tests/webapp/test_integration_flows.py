@@ -31,12 +31,14 @@ def test_i01_loss8_full_api_sequence(client, records_dir):
     assert data["ok"] is True
     b = data["briefing"]
 
-    # facts = 공시(DEMO-SRC-101) + 시세·거래량 카드(DEMO-SRC-102) — 전부 출처·기준시각 보유
-    assert [f["source_id"] for f in b["facts"]] == ["DEMO-SRC-101", "DEMO-SRC-102"]
+    # facts = 실적 공시(101) + IR 일정 공시(103 — D-0718-0107 확장) + 시세·거래량(102)
+    assert [f["source_id"] for f in b["facts"]] == \
+        ["DEMO-SRC-101", "DEMO-SRC-103", "DEMO-SRC-102"]
     assert all(isinstance(f["as_of"], str) and f["as_of"] for f in b["facts"])
     assert "3분기 잠정 영업이익 128억" in b["facts"][0]["text"]
-    assert "종가 46,000원" in b["facts"][1]["text"]
-    assert "3.2배" in b["facts"][1]["text"]
+    assert "2026-10-29" in b["facts"][1]["text"]  # 발표 예정일 — 모름의 사실 승격
+    assert "종가 46,000원" in b["facts"][2]["text"]
+    assert "3.2배" in b["facts"][2]["text"]
 
     # 해석 양면 + 모름 최소 1건(모름은 구체적 — 언제 확인되는지 병기.
     # 자명한 일반론은 금지 — 사용자 피드백 2026-07-16, D-0716-1510 반영)
@@ -150,9 +152,9 @@ def test_i03_profit15_load_and_remind(client):
     assert len(data["past_records"]) == 1
     assert data["past_records"][0]["side"] == "buy"
     assert data["past_records"][0]["qty"] == 20
-    # 브리핑 사실 소스(한빛식품 = 2xx)
+    # 브리핑 사실 소스(한빛식품 = 2xx — 실적·IR 일정·시세)
     assert [f["source_id"] for f in data["briefing"]["facts"]] == \
-        ["DEMO-SRC-201", "DEMO-SRC-202"]
+        ["DEMO-SRC-201", "DEMO-SRC-203", "DEMO-SRC-202"]
     assert data["guard"]["record"]["blocked"] == []
 
 

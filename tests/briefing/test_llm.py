@@ -145,7 +145,7 @@ def test_injection_text_confined_to_data_block():
 def test_prompt_lists_only_known_source_ids():
     fx = load_fixture("loss8")
     user = build_messages(fx, "DEMO-SRC-102")[1]["content"]
-    assert "허용 출처 ID: DEMO-SRC-101, DEMO-SRC-102" in user
+    assert "허용 출처 ID: DEMO-SRC-101, DEMO-SRC-103, DEMO-SRC-102" in user
 
 
 # ── JSON 파싱 방어 ────────────────────────────────────────────────────

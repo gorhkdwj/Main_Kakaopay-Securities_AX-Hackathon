@@ -77,9 +77,9 @@ def test_i06_disclosure_without_source_is_blocked_and_counted(make_variant_clien
     cats = {b["category"] for b in data["guard"]["record"]["blocked"]}
     assert cats == {"no_source", "asof_missing"}
 
-    # 렌더 허용 사실은 시세 카드 1건뿐
+    # 렌더 허용 사실은 IR 일정 공시(103)와 시세 카드(102) — 위반 블록만 차단(계약 §6)
     facts = data["briefing"]["facts"]
-    assert len(facts) == 1 and facts[0]["source_id"] == "DEMO-SRC-102"
+    assert [f["source_id"] for f in facts] == ["DEMO-SRC-103", "DEMO-SRC-102"]
     # 차단된 공시 텍스트는 렌더 대상(briefing)에 없다
     assert "3분기 잠정 영업이익" not in json.dumps(data["briefing"], ensure_ascii=False)
 
@@ -87,7 +87,7 @@ def test_i06_disclosure_without_source_is_blocked_and_counted(make_variant_clien
     assert data["safety"]["no_source"] == 1
     assert data["safety"]["asof_missing"] == 1
     assert data["safety"]["forbidden"] == 0
-    assert data["safety"]["facts_rendered"] == 1
+    assert data["safety"]["facts_rendered"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -100,26 +100,27 @@ def test_safety_counters_accumulate_per_session(client):
                 "no_source", "forbidden", "asof_missing"):
         assert zero[key] == 0, f"초기 카운터가 0이 아닙니다: {key}"
 
-    # loss8: 응답 1건 · 사실 2건 렌더 · 정적 텍스트 1건(community_buzz.note)
+    # loss8: 응답 1건 · 사실 3건 렌더(공시 2 + 시세 — D-0718-0107 확장) ·
+    # 정적 텍스트 1건(community_buzz.note)
     client.get("/api/scenario/loss8")
     s1 = client.get("/api/safety").json()["safety"]
     assert s1["responses_checked"] == 1
-    assert s1["facts_rendered"] == 2
+    assert s1["facts_rendered"] == 3
     assert s1["static_texts_checked"] == 1
     assert s1["no_source"] == 0 and s1["forbidden"] == 0 and s1["asof_missing"] == 0
 
-    # first_buy: +응답 1 · +사실 2 · +정적 2(buzz + 자동완성 초안)
+    # first_buy: +응답 1 · +사실 3 · +정적 2(buzz + 자동완성 초안)
     client.get("/api/scenario/first_buy")
     s2 = client.get("/api/safety").json()["safety"]
     assert s2["responses_checked"] == 2
-    assert s2["facts_rendered"] == 4
+    assert s2["facts_rendered"] == 6
     assert s2["static_texts_checked"] == 3
 
     # 미리보기도 guard를 거친다(응답 수만 증가 — 사실 렌더 없음)
     client.post("/api/preview", json={"scenario_id": "loss8", "side": "sell", "qty": 10})
     s3 = client.get("/api/safety").json()["safety"]
     assert s3["responses_checked"] == 3
-    assert s3["facts_rendered"] == 4
+    assert s3["facts_rendered"] == 6
     assert s3["no_source"] == 0 and s3["forbidden"] == 0 and s3["asof_missing"] == 0
 
     # 오류 미리보기는 guard 응답 자체가 없다 — 카운터 불변(계산 기록 미생성)

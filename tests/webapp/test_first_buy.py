@@ -41,9 +41,9 @@ def test_i02_first_buy_scenario_payload(client):
     assert dc["criteria"] == "최근 3년 매출 20% 이상·4년 연속 성장"
     assert dc["entered_at"] == "2026-07-17 15:10 KST"
 
-    # 사실 카드 소스(다온소재 = 3xx)
+    # 사실 카드 소스(다온소재 = 3xx — 실적·IR 일정·시세)
     assert [f["source_id"] for f in data["briefing"]["facts"]] == \
-        ["DEMO-SRC-301", "DEMO-SRC-302"]
+        ["DEMO-SRC-301", "DEMO-SRC-303", "DEMO-SRC-302"]
     assert data["guard"]["record"]["blocked"] == []
 
 

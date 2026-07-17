@@ -21,7 +21,7 @@
 
 | ID | 형식 | 발급 주체 | 용도 |
 |---|---|---|---|
-| source_id | 리서치 근거 = 병합 대장 ID(`F-/C-/X-SRC-####`) / 데모 가상 출처 = `DEMO-SRC-###` | fixture 작성 시 고정 | facts의 출처 추적. **DEMO-SRC는 가상 라벨임을 화면에 "(가상)"으로 병기**. 부여 규약: 백의 자리 1=가온전자·2=한빛식품·3=다온소재, 끝자리 01=공시(fixture disclosures)·02=시세·거래량(값의 원천은 fixture price/volume — 화면 조립부가 사용) |
+| source_id | 리서치 근거 = 병합 대장 ID(`F-/C-/X-SRC-####`) / 데모 가상 출처 = `DEMO-SRC-###` | fixture 작성 시 고정 | facts의 출처 추적. **DEMO-SRC는 가상 라벨임을 화면에 "(가상)"으로 병기**. 부여 규약: 백의 자리 1=가온전자·2=한빛식품·3=다온소재, 끝자리 01=실적 공시(fixture disclosures)·02=시세·거래량(값의 원천은 fixture price/volume — 화면 조립부가 사용)·03=IR 일정 공시(다음 실적 발표 예정일 — D-0718-0107-main: '모름'을 출처 있는 사실로 승격하는 데이터 확장) |
 | calculation_id | `CALC-YYYYMMDD-HHMMSS-<seq>` | engine | 계산 결과 ↔ AI 응답 ↔ 화면 표의 연결. LLM 출력의 숫자는 반드시 이 ID의 결과에서만 인용 |
 | decision_record_id | `REC-<세션>-<seq>` | webapp | 사후 회고(판단 기록) 식별 |
 | 운영 로그 ID | `W-/D-/T-MMDD-HHMM-세션` | 각 세션 | 헌법 §11·§13 |
@@ -41,7 +41,7 @@
 | portfolio_total_value | int | ✓ | 스냅샷 시점 총 평가자산(원) — loss8·profit15: 4,900,000 · first_buy: 1,000,000(전액 현금). **비중 계산의 고정 분모(§4)** |
 | cash | int | ✓ | 가용 예수금(원) — first_buy: 1,000,000(매수 한도·집중도 분모, §5.2-c) · 매도 시나리오: 0(데모 단순화) |
 | plan | obj | ✓ | {horizon, max_loss_pct, review_condition, recorded_at} — loss8: "3년 이상"/-15/"실적 2개 분기 연속 악화" · profit15: "1년"/-10/"목표 +20% 도달 또는 신제품 실적 확인" · **first_buy: null(→ 질문 초안 흐름 시연)** |
-| disclosures[] | arr | ✓ | {text, source_id(DEMO-SRC-###), published_at} — loss8: "3분기 잠정 영업이익 128억, 전년 -32%"(DEMO-SRC-101) · profit15: "2분기 잠정 매출 812억, 전년 +18%"(DEMO-SRC-201) · first_buy: "2분기 잠정 영업이익 195억, 전년 +7%"(DEMO-SRC-301) |
+| disclosures[] | arr | ✓ | {text, source_id(DEMO-SRC-###), published_at} — 시나리오당 2건: ① 실적 공시 — loss8: "3분기 잠정 영업이익 128억, 전년 -32%"(DEMO-SRC-101) · profit15: "2분기 잠정 매출 812억, 전년 +18%"(DEMO-SRC-201) · first_buy: "2분기 잠정 영업이익 195억, 전년 +7%"(DEMO-SRC-301) ② IR 일정 공시(x03 — D-0718-0107-main): 다음 실적 발표 예정일 — loss8: 4분기 잠정 2026-10-29(DEMO-SRC-103) · profit15: 2분기 확정 2026-08-13(DEMO-SRC-203) · first_buy: 2분기 확정 2026-08-12(DEMO-SRC-303). 표현 규약: "회사가 예정일을 공시했다"는 과거 사실 서술만 — 미래 발표를 확정 사실처럼 쓰지 않는다(§14 정합) |
 | interpretations[] | arr | ✓ | {text, stance("긍정 시각"/"부정 시각")} — **양면 병기 강제**: 한쪽만 있으면 검증 실패 |
 | trade_date | str | ✓ | 모의 체결 기준일 — 전 시나리오 공통 `2026-07-17`(금) → D+2 = 7/21(화). 데모 결정론 보장용 |
 | community_buzz | obj | 선택 | {level, note} — 사실 카드와 **분리 렌더**, 라벨은 **'관심 지표' 프레임**(커뮤니티를 깎아내리는 훈계 라벨 금지 — 낙인 금지 원칙과 정합, D-0716-1326-main) |
