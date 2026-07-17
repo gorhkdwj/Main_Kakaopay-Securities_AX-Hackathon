@@ -47,14 +47,17 @@
     <div class="alert-band">실앱 주문 화면 재현(시연용) — 주문은 실행되지 않아요</div>
     <div id="s0-header"></div>
     <div class="kcard" aria-label="주문 입력(재현 — 동작 없음)">
-      <div class="sheet-row"><span>주문 유형</span><span>지정가</span></div>
+      <!-- 실앱 주문 패널의 지정가|시장가 세그먼트 재현(비기능 장식 — 스펙 §2.9) -->
+      <div class="seg" aria-hidden="true"><span class="seg-item on">지정가</span><span class="seg-item">시장가</span></div>
       <div class="sheet-row"><span>가격</span><span id="s0-price">—</span></div>
       <div class="sheet-row"><span>수량</span><span id="s0-qty">—</span></div>
     </div>
-    <button id="s0-order-buy" class="btn order-fake side-buy" type="button"
-      aria-label="구매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">구매하기</button>
-    <button id="s0-order-sell" class="btn order-fake side-sell" type="button"
-      aria-label="판매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">판매하기</button>
+    <div class="order-cta-row"><!-- 실앱 재현: 판매(파랑)·구매(빨강) 좌우 병렬(색 구분만·row-reverse로 판매 좌/구매 우). 라벨 "판매/구매" = 실앱 동일(QA 갭4) -->
+      <button id="s0-order-buy" class="btn order-fake side-buy" type="button"
+        aria-label="구매 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">구매</button>
+      <button id="s0-order-sell" class="btn order-fake side-sell" type="button"
+        aria-label="판매 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">판매</button>
+    </div>
     <p class="footnote">이 데모는 특정 방향을 권하지 않아요 · 모든 주문은 모의(가상)예요.</p>
 
     <!-- 인터셉트 팝업 — "주문 버튼을 누른 순간"의 재현(상시 제시·바로 주문은 1탭) -->
@@ -161,18 +164,23 @@
     </div>
     <div id="s6-result"></div>
 
-    <!-- 주문 확인 모달(중앙 — 필수 고지 4종 + 비가역 확인 체크, D-0718-0548) -->
+    <!-- 주문 확인 모달(중앙 — 필수 고지 4종 + 비가역 확인 체크, D-0718-0548).
+         실앱 주문 확인 시트(캡처 30·31) 구조 재현: 핸들바·종목명+N주 헤더·총액 대형 행·
+         점선 구분·자세히 보기 행 — 스펙 §2.8. -->
     <div id="sheet-backdrop" hidden>
       <div id="order-sheet" role="dialog" aria-modal="true" aria-label="주문 재확인">
-        <h3>제출 전 마지막 확인이에요</h3>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div id="sheet-head"></div>
         <div id="sheet-rows"></div>
         <div id="sheet-notices"></div>
         <label class="confirm-check" for="confirm-ack">
           <input type="checkbox" id="confirm-ack"> 위 고지를 확인했고, 체결 후 취소할 수 없음을 이해했어요.
         </label>
         <p id="sheet-error" class="err-text" hidden></p>
-        <button id="btn-settle" class="btn exec" data-role="order-execute" type="button" disabled>모의 체결하기</button>
-        <button id="btn-sheet-back" class="btn ghost" type="button">돌아가기</button>
+        <div class="sheet-btn-row">
+          <button id="btn-settle" class="btn exec" data-role="order-execute" type="button" disabled>모의 체결하기</button>
+          <button id="btn-sheet-back" class="btn ghost" type="button">돌아가기</button>
+        </div>
       </div>
     </div>
   </section>
@@ -201,12 +209,15 @@
     <div id="s8-judgment"></div>
     <div id="s8-handoff"></div>
     <div class="kcard" aria-label="주문 입력(재현 — 동작 없음)">
-      <div class="sheet-row"><span>주문 유형</span><span>지정가</span></div>
+      <!-- 실앱 주문 패널의 지정가|시장가 세그먼트 재현(비기능 장식 — 스펙 §2.9) -->
+      <div class="seg" aria-hidden="true"><span class="seg-item on">지정가</span><span class="seg-item">시장가</span></div>
       <div class="sheet-row"><span>가격</span><span id="s8-price">—</span></div>
       <div class="sheet-row"><span>수량</span><span id="s8-qty">—</span></div>
     </div>
-    <button id="s8-order-buy" class="btn order-fake side-buy" type="button" disabled>구매하기</button>
-    <button id="s8-order-sell" class="btn order-fake side-sell" type="button" disabled>판매하기</button>
+    <div class="order-cta-row"><!-- 실앱 재현: 판매(파랑)·구매(빨강) 좌우 병렬·전부 disabled(종착). 라벨 "판매/구매" = 실앱 동일(QA 갭4) -->
+      <button id="s8-order-buy" class="btn order-fake side-buy" type="button" disabled>구매</button>
+      <button id="s8-order-sell" class="btn order-fake side-sell" type="button" disabled>판매</button>
+    </div>
     <p class="footnote">이 화면은 실제 앱의 주문 화면을 본뜬 재현이에요 — 이 데모에서 주문은 실행되지 않아요.</p>
   </section>
 

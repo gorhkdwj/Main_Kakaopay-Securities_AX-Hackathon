@@ -299,15 +299,70 @@ function renderAll() {
 }
 
 /* 주문 화면 재현 공용(S0 진입·⑧ 종착 — 계약 §9): 표시만.
-   side 강조 없음 — 구매/판매 병렬·색 구분만(전 시나리오 공통, D-0717-2121). */
+   side 강조 없음 — 구매/판매 병렬·색 구분만(전 시나리오 공통, D-0717-2121).
+   실앱 종목 상세 크롬 재현(캡처 27 — 리디자인 S3): 네비 행·탭·거래량 행·차트·기간 칩은
+   전부 비기능 장식(span·aria-hidden — 버튼 아님·배선 없음)이다. 수치는 가상 fixture 장식
+   [데모 고정]. 차트 방향은 이미 렌더 중인 change_pct 부호를 따른다(표시 전용). */
+function replicaChartSvg(changePct, close) {
+  const down = "0,26 28,20 52,38 78,30 106,52 134,46 162,66 190,58 214,78 242,72 270,88 300,82 330,94 360,98";
+  const flat = "0,60 30,56 60,63 90,58 120,64 150,59 180,62 210,57 240,63 270,59 300,62 330,58 360,61";
+  const pts = changePct < 0 ? down
+    : changePct > 0 ? down.split(" ").map(p => { const [x, y] = p.split(","); return `${x},${120 - y}`; }).join(" ")
+    : flat;
+  const color = changePct < 0 ? "var(--down)" : changePct > 0 ? "var(--up)" : "var(--flat)";
+  // 현재가 지점 dot + halo(실앱 차트 종점 표시 — 스펙 §2.5). 면 채움 없음(QA 갭1 — 실앱은 라인만).
+  const [lx, ly] = pts.trim().split(" ").pop().split(",");
+  // 우측 가격 눈금 [데모 고정] 장식 — 표시 가격 ±5%를 500원 단위로 반올림한 차트 스케일
+  // 마커일 뿐 판단 재료·금액 계산이 아니다(계산·생성 분리 원칙 무관 — 장식 눈금).
+  const t1 = Math.round((close * 1.05) / 500) * 500;
+  const t3 = Math.round((close * 0.95) / 500) * 500;
+  return `<div class="kp-chart" aria-hidden="true"><svg viewBox="0 0 360 120" preserveAspectRatio="none" style="overflow:visible">
+    <line x1="0" y1="10" x2="360" y2="10" stroke="#f2f4f6" stroke-width="1"/>
+    <line x1="0" y1="60" x2="360" y2="60" stroke="#f2f4f6" stroke-width="1"/>
+    <line x1="0" y1="110" x2="360" y2="110" stroke="#f2f4f6" stroke-width="1"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lx}" cy="${ly}" r="10" fill="none" stroke="${color}" stroke-opacity=".3" stroke-width="1.5"/>
+    <circle cx="${lx}" cy="${ly}" r="4" fill="${color}"/>
+  </svg><div class="kp-axis"><span>${num(t1)}</span><span>${num(close)}</span><span>${num(t3)}</span></div></div>`;
+}
+/* 기간 칩 2줄(기간 + 기간 수익률 — 실앱 캡처27·QA 갭2). 수치는 당일 등락(실데이터)에
+   고정 배수를 곱한 [데모 고정] 장식(가상 종목 재현 화면 전용 — 판단 재료 아님). */
+function replicaRangeChips(changePct) {
+  const items = [["1일", 1], ["1주", 1.35], ["1달", 2.1], ["3달", 2.8], ["1년", -0.6]];
+  const chips = items.map(([k, mul], i) => {
+    const v = Math.round(changePct * mul * 10) / 10;
+    const cls = v > 0 ? "up" : v < 0 ? "dn" : "";
+    const ic = v > 0 ? "▲" : v < 0 ? "▼" : "—";
+    return `<span class="kp-range-chip${i === 1 ? " on" : ""}">${k}<span class="pct ${cls}">${ic} ${Math.abs(v).toFixed(1)}%</span></span>`;
+  }).join("");
+  return `<div class="kp-range" aria-hidden="true">${chips}
+    <span class="kp-range-ic"><svg viewBox="0 0 24 24"><polyline points="3,16 8,10 13,14 21,5" fill="none" stroke="var(--up)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="kp-range-ic"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"/></svg></span>
+  </div>`;
+}
+
 function renderOrderReplica(prefix) {
   const m = S.data.meta;
   const name = m.instrument ? m.instrument.name : "";
-  el(prefix + "-header").innerHTML = `<div class="price-head">
-    <div><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span>
-      <span class="mk">${esc(m.market_label)}</span></div>
-    <div><span class="pr">${num(m.price.close)}</span>원 ${pctChange(m.price.change_pct)}</div>
-  </div>`;
+  el(prefix + "-header").innerHTML = `
+  <div class="kp-nav" aria-hidden="true">
+    <svg class="kp-ic" viewBox="0 0 24 24"><path d="M20 12H4M10 5L3 12l7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="kp-nav-sp"></span>
+    <svg class="kp-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.2 4.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <svg class="kp-ic" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4.5L6 21z" fill="#ffd338"/></svg>
+    <svg class="kp-ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+  </div>
+  <div class="price-head kp">
+    <div class="kp-nm-row"><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span><span class="kp-caret" aria-hidden="true"></span></div>
+    <div><span class="pr">${num(m.price.close)}원</span></div>
+    <div class="kp-chg-row">${pctChange(m.price.change_pct)} <span class="mk">${esc(m.market_label)}</span><span class="kp-help" aria-hidden="true">?</span></div>
+  </div>
+  <div class="kp-tabs" aria-hidden="true">
+    <span class="kp-tab on">정보</span><span class="kp-tab">차트<i class="kp-dot"></i></span><span class="kp-tab">호가<i class="kp-dot"></i></span><span class="kp-tab">보유</span><span class="kp-tab">토론<i class="kp-dot"></i></span>
+  </div>
+  <div class="kp-stat-row" aria-hidden="true"><span>거래량 <b>1,842,113</b></span><span class="kp-stat-right">시가총액 <b>3.2조원</b></span><span class="kp-stat-fold">⌄</span></div>
+  ${replicaChartSvg(m.price.change_pct, m.price.close)}
+  ${replicaRangeChips(m.price.change_pct)}`;
   el(prefix + "-price").textContent = won(m.price.close);
   const st = S.settlement;
   el(prefix + "-qty").textContent = st ? num(st.qty) + "주" : "—";
@@ -438,15 +493,16 @@ function renderStep2() {
     return;
   }
 
+  // 브리핑 원천 라벨(계약 §8 — 폴백을 숨기지 않는다): 실앱 "◆AI분석" 배지 문법으로 표시(스펙 §2.6)
   const srcLabel = BRIEFING_SOURCE_LABELS[S.data.briefing_source] || "";
   el("s2-src").innerHTML = srcLabel
-    ? `<span>브리핑 생성: ${esc(srcLabel)}</span>` : "";
+    ? `<span class="src-badge">◆ ${esc(srcLabel)}</span><span class="asof-text">브리핑 생성 원천</span>` : "";
 
   let facts = (b.facts || []).map((f) => `
     <div class="kcard">
       <div class="tag fact">확인된 사실</div>
-      ${esc(f.text)}
-      <div class="meta"><span>출처: ${esc(f.source_id)}(가상)</span><span>기준시각 ${esc(f.as_of)}</span></div>
+      <div class="fact-text">${esc(f.text)}</div>
+      <div class="ai-meta"><span class="src-badge">◆ 출처 ${esc(f.source_id)}(가상)</span><span class="asof-text">기준시각 ${esc(f.as_of)}</span></div>
     </div>`).join("");
   if (m.disclosures_state) {
     facts += `<div class="kcard state">공시 — ${esc(m.disclosures_state)} · 여기서는 값을 만들어 채우지 않아요</div>`;
@@ -732,12 +788,24 @@ function openSheet() {
   const name = m.instrument ? m.instrument.name : "";
   const sideSell = S.flowSide === "sell";
 
-  el("sheet-rows").innerHTML = [
-    ["종목", `${esc(name)} (가상)`],
-    ["수량", `${num(v.inputs.qty)}주`],
-    [sideSell ? "예상 수령액" : "총 결제예정액",
-      `<b>${won(sideSell ? v.net_proceeds : v.total_cost)}</b>`],
-  ].map(([k, val]) => `<div class="sheet-row"><span>${k}</span><span>${val}</span></div>`).join("");
+  // 실앱 주문 확인 시트 구조(캡처 30·31 — 스펙 §2.8): 종목명+N주 방향(액센트) 헤더 →
+  // 총액 대형 행 → 점선 → "주문 자세히 보기"(장식·항상 펼침) → 상세 KV 행.
+  el("sheet-head").innerHTML = `
+    <div class="sheet-head-name">${esc(name)} <span class="meta-inline">(가상)</span></div>
+    <div class="sheet-side-line ${sideSell ? "side-sell" : "side-buy"}">${num(v.inputs.qty)}주 ${sideSell ? "판매" : "구매"}</div>`;
+  el("sheet-rows").innerHTML = `
+    <div class="total-row"><span class="label">${sideSell ? "예상 수령액" : "총 결제예정액"}</span>
+      <span class="value">${won(sideSell ? v.net_proceeds : v.total_cost)}</span></div>
+    <hr class="dotted-hr">
+    <div class="accordion-row" aria-hidden="true"><span>주문 자세히 보기</span><span class="acc-caret">⌃</span></div>
+    <div class="sheet-row"><span>주문 방법</span><span>지정가</span></div>
+    <div class="sheet-row"><span>1주 주문 가격</span><span>${won(m.price.close)}</span></div>
+    <div class="sheet-row"><span>수량</span><span>${num(v.inputs.qty)}주</span></div>
+    ${sideSell
+      ? `<div class="sheet-row"><span>예상 수수료</span><span>${won(v.fee)}</span></div>
+         <div class="sheet-row"><span>예상 세금</span><span>${won(v.tax)}</span></div>`
+      : `<div class="sheet-row"><span>예상 수수료</span><span>${won(v.fee)}</span></div>`}
+    <hr class="dotted-hr">`;
 
   const notices = sideSell ? [
     `수수료 ${won(v.fee)}과 세금 ${won(v.tax)}이 대금에서 빠져요.`,
