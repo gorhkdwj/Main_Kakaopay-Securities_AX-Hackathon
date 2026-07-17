@@ -15,6 +15,14 @@
 
 ---
 
+### W-0717-2323-main · LLM 공급자 Claude API 교체(사용자 지시 — D-0717-2323-main)
+**요청** — "claude api로 변경할것임" (Anthropic 크레딧 결제 진행에 따른 공급자 확정).
+**수행 작업** — `call_openai` → `call_anthropic`(Messages API httpx REST 직행 — SDK 무추가, system 메시지는 top-level 파라미터), 키 `ANTHROPIC_API_KEY`·모델 `ANTHROPIC_MODEL`(기본 claude-sonnet-5), 캐시 생성 스크립트 generated_by "anthropic:모델"·배치 타임아웃 60초, 테스트 env 격리 키 명칭 교체, README AI 브리핑 절(키 발급처 console.anthropic.com), requirements.txt에서 openai 제거(락파일·venv의 openai==2.45.0은 잔존 — 미사용, 락-venv 정합 우선).
+**변경 파일** — src/briefing/llm.py, scripts/briefing/gen_llm_cache.py, tests/briefing/test_llm.py, tests/webapp/conftest.py, README.md, requirements.txt, Decisionlog.md(D-0717-2323-main)
+**검증** — pytest 288건 전체 통과(폴백·인젝션·캐시 테스트는 공급자 중립 설계라 무수정 유효), 안전 게이트 재실행 통과(B 27/27·P 오차단 0·브리핑 3종 무차단·고지 4/4). 화면 변경 없음(playwright 재실행 불요). 정합 QA: 계약 §8·§9는 공급자 중립 표현이라 무변경 확인, OPENAI 문자열 전수 grep 잔재 0건.
+**판단 근거** — D-0717-2323-main(사용자 결제 공급자와 코드 일치·본선 전야 의존성 무추가).
+**결과** — 완료. **미검증 범위: Claude 실호출(live) — 키 미설정 상태.** 키 확보 후 .env 작성 → gen_llm_cache.py 실생성 → 게이트 재실행 예정.
+
 ### W-0717-2318-main · S5 완료 — LLM 브리핑 결합(폴백 사슬·guard 확장·안전 게이트)
 **요청** — "s5 시작" (구현 계획 S5: LLM 브리핑 결합 — 사용자 승인에 따른 단계 착수).
 **수행 작업** — 3커밋으로 구현:

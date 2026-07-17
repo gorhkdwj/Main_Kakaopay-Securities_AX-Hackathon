@@ -26,6 +26,7 @@
 | 13 | D-0716-2046-main | S4 흐름 재구성: ⑧=실앱 주문 화면 재현(핸드오프 완결·홈 스킵 직행) + 안전모드=패널 오버레이 전환 | 채택 |
 | 14 | D-0717-2121-main | 상시 인터셉트 확정(S0=주문 화면+진입 팝업으로 시연 시작) + 재현 화면 방향 중립화(§14 해석 정련) | 채택 |
 | 15 | D-0717-2310-main | S5 브리핑 원천 설계: 폴백 사슬(live→cache→static)·캐시 fixture 지문 대조·초기 캐시=정적 조립 기반 초안(출처 명시) | 채택 |
+| 16 | D-0717-2323-main | LLM 공급자 OpenAI → Anthropic(Claude API) 교체 — httpx REST 직행·기본 모델 claude-sonnet-5 | 채택 |
 
 ---
 
@@ -357,3 +358,19 @@ S5(LLM 브리핑 결합) 착수 시점에 OpenAI 키 미확보(.env 없음). 완
 **영향** — src/briefing/llm.py 신설, app.py(create_app 인자 3종·briefing_source·감사로그), 계약 §8(폴백 사슬·지문 규칙)·§9(원천 배지), 스펙 §4 ②, data/fixtures/llm_cache/ 3종, scripts/briefing/·scripts/gate/, tests/briefing/·test_briefing_sources.py, README(AI 브리핑 절).
 
 **재검토 조건** — 키 확보 후 실생성 캐시로 교체 시 품질·gate 재검(캐시 무결성 테스트가 지킴), 본선 현장에서 live 시도 지연이 체감되면 BRIEFING_MODE=cache 고정, 실서비스 전 [데모 고정]인 모델·타임아웃 재검토.
+
+### D-0717-2323-main · LLM 공급자 OpenAI → Anthropic(Claude API) 교체
+
+**상황**
+사용자가 Anthropic Console에서 Claude API 크레딧 결제를 진행하며 "claude api로 변경할 것"을 명시(2026-07-17 밤). 기존 결정(D-0716-1026)은 OpenAI였고, S5 브리핑 계층(D-0717-2310)은 공급자를 live 호출자 함수 하나로 격리해 둔 상태.
+
+**검토한 선택지**
+① OpenAI 유지(키 이원화) ② **Anthropic 교체 — 공식 SDK 설치** ③ **Anthropic 교체 — httpx(기존 의존성) REST 직행**.
+
+**결정** — ③ 채택. `call_openai` → `call_anthropic`(Messages API, system 메시지는 top-level 파라미터로 이동), 키 `ANTHROPIC_API_KEY`(.env 전용), 모델 기본 `claude-sonnet-5`(`ANTHROPIC_MODEL`로 변경 가능), 앱 내 타임아웃 8초 유지·캐시 생성 스크립트는 60초. requirements.txt에서 openai 제거(락파일·venv의 openai는 잔존 — 미사용, 제거 시 락-venv 불일치 리스크가 더 큼).
+
+**근거** — ① 사용자가 실제 결제·키를 확보하는 공급자와 코드가 일치해야 함 ② 본선 전야에 신규 SDK 설치는 의존성 리스크(락파일 변경·재현성) — httpx는 이미 직접 의존성이고 Messages API는 헤더 3개+JSON이면 충분 ③ 폴백 사슬·guard·프롬프트·테스트(주입식)는 공급자 중립으로 설계되어 교체 범위가 호출자 함수 1개+환경변수 명칭으로 국한됨.
+
+**영향** — src/briefing/llm.py(call_anthropic·상수·docstring), scripts/briefing/gen_llm_cache.py(generated_by "anthropic:모델"), tests/briefing(격리 env 키 명칭)·tests/webapp/conftest 주석, README(AI 브리핑 절 — 키 발급처 console.anthropic.com), requirements.txt. 계약 §8·§9는 공급자 중립 표현이라 무변경. D-0716-1026의 OpenAI 항목은 본 결정으로 대체.
+
+**재검토 조건** — live 실호출 검증 시 JSON 형식 준수율·한국어 품질·지연이 미달이면 모델 변경(ANTHROPIC_MODEL) 또는 캐시 모드 고정, Anthropic API 버전 헤더(2023-06-01) 변경 공지 시 상수 갱신.

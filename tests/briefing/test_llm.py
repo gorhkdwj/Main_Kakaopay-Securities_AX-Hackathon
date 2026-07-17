@@ -39,7 +39,7 @@ def load_fixture(scenario_id: str) -> dict:
 def isolate_env(monkeypatch, tmp_path):
     """사용자 .env·환경변수(키 유무)와 테스트를 격리한다."""
     monkeypatch.setattr(llm, "ENV_PATH", tmp_path / "no.env")
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("BRIEFING_MODE", raising=False)
 
 

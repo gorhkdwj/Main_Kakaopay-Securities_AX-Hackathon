@@ -37,14 +37,14 @@ uv pip sync requirements.lock.txt
 - **변경 반영 규칙**: 정적 파일(`src/webapp/static/`)과 fixture(`data/fixtures/`)는 서버 재시작 없이 반영된다 — 브라우저에서 강력 새로고침(Ctrl+F5)만 하면 된다. `app.py` 등 파이썬 코드는 서버 재시작이 필요하다 — `--reload` 옵션을 켜 두면 자동 재시작된다.
 
 ## AI 브리핑 (S5 — LLM 결합·폴백)
-② 브리핑 화면의 응답 원천은 3계층 폴백 사슬이다: **live**(OpenAI 실시간 호출) → **cache**(`data/fixtures/llm_cache/` — fixture 지문(SHA-256) 일치 시에만 사용) → **static**(정적 조립). 현재 원천은 ② 화면의 "브리핑 생성:" 배지에 항상 표시되고, 결정 이력은 `out/audit/briefing_events.jsonl`에 남는다. 어느 원천이든 렌더 전에 동일한 정책 가드(출처·기준시각·금지 표현·숫자 대사·출처 실재 검사)를 통과한 블록만 화면에 나온다.
+② 브리핑 화면의 응답 원천은 3계층 폴백 사슬이다: **live**(Anthropic Claude API 실시간 호출) → **cache**(`data/fixtures/llm_cache/` — fixture 지문(SHA-256) 일치 시에만 사용) → **static**(정적 조립). 현재 원천은 ② 화면의 "브리핑 생성:" 배지에 항상 표시되고, 결정 이력은 `out/audit/briefing_events.jsonl`에 남는다. 어느 원천이든 렌더 전에 동일한 정책 가드(출처·기준시각·금지 표현·숫자 대사·출처 실재 검사)를 통과한 블록만 화면에 나온다.
 
-- **라이브 모드 켜기**: 프로젝트 루트에 `.env` 파일을 직접 만들고 아래를 적는다(키는 채팅·문서·커밋에 절대 넣지 않는다 — `.env`는 Git 제외):
+- **라이브 모드 켜기**: [console.anthropic.com](https://console.anthropic.com)에서 API 키를 발급받아, 프로젝트 루트에 `.env` 파일을 직접 만들고 아래를 적는다(키는 채팅·문서·커밋에 절대 넣지 않는다 — `.env`는 Git 제외):
   ```
-  OPENAI_API_KEY=<본인 키>
-  # 선택: OPENAI_MODEL=gpt-4o-mini (기본값) · BRIEFING_MODE=auto|live|cache|static (기본 auto)
+  ANTHROPIC_API_KEY=<본인 키>
+  # 선택: ANTHROPIC_MODEL=claude-sonnet-5 (기본값) · BRIEFING_MODE=auto|live|cache|static (기본 auto)
   ```
-  키가 있으면 `auto`가 live를 시도하고, 실패(타임아웃 8초·오류·오프라인) 시 즉시 캐시로 전환한다. 키가 없으면 네트워크를 시도하지 않는다.
+  키가 있으면 `auto`가 live를 시도하고, 실패(타임아웃 8초·오류·오프라인) 시 즉시 캐시로 전환한다. 키가 없으면 네트워크를 시도하지 않는다. 호출은 httpx 직행(REST)이라 별도 SDK 설치가 필요 없다.
 - **캐시 재생성**: `.\.venv\Scripts\python.exe scripts\briefing\gen_llm_cache.py` (실LLM — 키 필요) 또는 `--from-static`(정적 조립 기반 초안). 가드 통과분만 저장되며, 현재 캐시는 정적 조립 기반 초안(`generated_by`에 명시)이다.
 - **안전 게이트**(시연·제출 직전 필수): `.\.venv\Scripts\python.exe scripts\gate\run_gate.py` — 안전 테스트셋(B 전건 차단·P 오차단 0)·브리핑 3종 무차단·위험 고지 4종을 검사하고 결과를 `out/audit/gate_*.json`에 남긴다. 실패 시 종료 코드 1(제출 보류).
 

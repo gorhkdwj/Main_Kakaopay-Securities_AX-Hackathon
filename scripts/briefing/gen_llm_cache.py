@@ -9,7 +9,9 @@ r"""LLM 브리핑 캐시 생성기 — guard 통과분만 동결 저장한다(S5
     --from-static : compose_briefing(S4 정적 조립) 결과를 초안으로 저장.
                     키 불필요 — 키 확보 전 폴백 캐시를 채우는 용도이며
                     generated_by에 출처를 정직하게 남긴다.
-    (기본)        : OpenAI 실호출(build_messages → call_openai) 후 저장.
+    (기본)        : Claude 실호출(build_messages → call_anthropic — .env의
+                    ANTHROPIC_API_KEY 필요) 후 저장. 배치 생성이므로
+                    타임아웃은 앱(8초)보다 긴 60초를 쓴다.
 
 공통 안전 규칙: 저장 전 guard(check_response + 숫자 대사·출처 실재 검사)를
 통과해야 하며, 차단이 1건이라도 있으면 저장하지 않고 사유를 출력한다
@@ -30,8 +32,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.briefing.llm import (  # noqa: E402
     DEFAULT_CACHE_DIR,
+    DEFAULT_MODEL,
     build_messages,
-    call_openai,
+    call_anthropic,
     fixture_fingerprint,
     parse_llm_json,
 )
@@ -58,10 +61,10 @@ def make_response(fx: dict, scenario_id: str, from_static: bool) -> tuple[dict, 
         response, _aux = compose_briefing(fx)
         return response, "static_compose_draft_v1"
     price_src = PRICE_FACT_SOURCE.get(scenario_id)
-    raw = call_openai(build_messages(fx, price_src))
+    raw = call_anthropic(build_messages(fx, price_src), timeout=60.0)
     import os
-    model = os.environ.get("OPENAI_MODEL") or "gpt-4o-mini"
-    return parse_llm_json(raw), f"openai:{model}"
+    model = os.environ.get("ANTHROPIC_MODEL") or DEFAULT_MODEL
+    return parse_llm_json(raw), f"anthropic:{model}"
 
 
 def main() -> int:

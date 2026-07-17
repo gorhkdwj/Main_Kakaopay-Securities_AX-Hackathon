@@ -63,7 +63,7 @@ def records_dir(tmp_path) -> Path:
 def client(records_dir, tmp_path) -> TestClient:
     """기본 fixture(data/fixtures)를 쓰는 새 앱 클라이언트(세션 카운터 0에서 시작).
 
-    briefing_mode="cache"로 고정한다 — 사용자 .env에 OPENAI_API_KEY가 있어도
+    briefing_mode="cache"로 고정한다 — 사용자 .env에 ANTHROPIC_API_KEY가 있어도
     테스트가 라이브 호출을 시도하지 않게(네트워크 0회 원칙). 원본 fixture는
     캐시 지문이 일치하므로 cache 경로, 변형 fixture는 static 폴백이 된다.
     """
