@@ -14,7 +14,7 @@ class TestLoss8Premises:
         assert loss8["holding"]["qty"] == 30
         assert loss8["holding"]["avg_price"] == 50_000
         assert loss8["portfolio_total_value"] == 4_900_000
-        assert loss8["cash"] == 0  # 매도 시나리오는 cash 0(계약 §3.1)
+        assert loss8["cash"] == 1_000_000  # 양방향 흐름 — 전 시나리오 예수금 동일(계약 §3.1, D-0718-0225)
         assert loss8["trade_date"] == "2026-07-17"
         assert loss8["instrument"]["market"] == "KOSPI"
 
@@ -27,7 +27,7 @@ class TestProfit15Premises:
         assert profit15["holding"]["qty"] == 20
         assert profit15["holding"]["avg_price"] == 40_000
         assert profit15["portfolio_total_value"] == 4_900_000
-        assert profit15["cash"] == 0
+        assert profit15["cash"] == 1_000_000
         assert profit15["trade_date"] == "2026-07-17"
 
 

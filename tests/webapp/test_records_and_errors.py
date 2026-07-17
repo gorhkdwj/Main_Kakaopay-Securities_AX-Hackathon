@@ -112,7 +112,9 @@ def test_preview_input_errors(client):
         ({"scenario_id": "loss8", "side": "sell", "qty": 2.5}, "QuantityError", "정수"),
         ({"scenario_id": "loss8", "side": "sell", "qty": "10"}, "QuantityError", "정수"),
         ({"scenario_id": "loss8", "side": "sell", "qty": 31}, "QuantityError", "보유수량"),
-        ({"scenario_id": "loss8", "side": "buy", "qty": 1}, "InsufficientCashError", "예수금"),
+        # 양방향(D-0718-0225): loss8도 예수금 1,000,000 — qty=1 매수는 이제 정상.
+        # 예수금 초과 경계는 22주(총 결제 1,012,151 > 1,000,000 — 계약 §5.2-c 공유).
+        ({"scenario_id": "loss8", "side": "buy", "qty": 22}, "InsufficientCashError", "예수금"),
         ({"scenario_id": "first_buy", "side": "sell", "qty": 1}, "no_holding", "보유 수량"),
     ]
     for payload, code, keyword in cases:

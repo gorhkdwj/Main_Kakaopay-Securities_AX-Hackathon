@@ -21,7 +21,7 @@
     "qty": 20,
     "avg_price": 40000
   },
-  "cash": 0,
+  "cash": 1000000,
   "portfolio_total_value": 4900000,
   "plan": {
     "horizon": "1년",

@@ -178,3 +178,42 @@ def test_i03_profit15_preview_sign_and_settle(client):
     st = client.post("/api/settle",
                      json={"preview": p, "confirmed_qty": 10}).json()["settlement"]
     assert st["is_mock"] is True and st["realized_pnl"] == 59011
+
+
+def test_i01b_loss8_buy_direction_flow(client, records_dir):
+    """양방향(D-0718-0225): 보유 시나리오에서도 구매 검토 계산·체결·기록이 성립한다.
+
+    세 시나리오의 현재가·예수금이 동일하므로 매수 골든값은 first_buy(§5.2-c)와
+    완전 공유된다 — 8주 368,055(경고 없음)·10주 460,069(집중도 경고 46.0%).
+    """
+    # 서버 기본 방향은 보유 기반 sell 유지(meta.side — 클라이언트 flowSide가 오버라이드)
+    data = client.get("/api/scenario/loss8").json()
+    assert data["meta"]["side"] == "sell"
+    assert data["meta"]["cash"] == 1_000_000
+
+    p8 = client.post("/api/preview",
+                     json={"scenario_id": "loss8", "side": "buy", "qty": 8}).json()["preview"]
+    assert p8["total_cost"] == 368_055
+    assert p8["tax"] == 0
+    assert p8["concentration_warning"] is False
+
+    p10 = client.post("/api/preview",
+                      json={"scenario_id": "loss8", "side": "buy", "qty": 10}).json()["preview"]
+    assert p10["total_cost"] == 460_069
+    assert p10["remaining_cash"] == 539_931
+    assert p10["weight_after_pct"] == 46.0
+    assert p10["concentration_warning"] is True
+
+    st = client.post("/api/settle",
+                     json={"preview": p10, "confirmed_qty": 10}).json()["settlement"]
+    assert st["is_mock"] is True and st["side"] == "buy"
+    assert st["total_cost"] == 460_069
+
+    rec = client.post("/api/record", json={
+        "scenario_id": "loss8",
+        "intent": "10주 구매 검토",
+        "reason_text": "하락을 저가 매수 기회로 보고 소액만 검토",
+        "calculation_id": st["calculation_id"],
+    }).json()
+    assert rec["ok"] is True
+    assert rec["record"]["intent"] == "10주 구매 검토"
