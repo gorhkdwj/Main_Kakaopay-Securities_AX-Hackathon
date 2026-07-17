@@ -13,9 +13,10 @@
   --card: #ffffff;
   --card-sub: #f7f8fa;
 
-  /* 텍스트 위계 4단(스펙 §1.1) */
+  /* 텍스트 위계 4단(스펙 §1.1) + 중간톤(QA — 시트 상세 라벨용) */
   --ink: #191f28;             /* ink-900 */
   --ink-2: #333d4b;           /* ink-700 */
+  --ink-3: #4e5968;           /* ink-600 — 시트 상세 라벨(아코디언 연회색과 위계 구분) */
   --sub: #8b95a1;             /* ink-500 */
   --hint: #b0b8c1;            /* ink-300 */
   --axis: #c4c9cf;            /* ink-200 */
@@ -311,7 +312,7 @@ textarea { resize: vertical; }
 #intercept-backdrop:not([hidden]) > #intercept-sheet { animation: modal-in .22s cubic-bezier(.2, .8, .3, 1); }
 #order-sheet, #intercept-sheet {
   width: 100%; max-width: 430px;
-  background: var(--bg); border-radius: var(--r-sheet);
+  background: var(--bg); border-radius: 24px; /* 실앱 시트 라운드(QA 하6 — --r-sheet(20)은 #phone 공용이라 직접 지정) */
   padding: 12px 24px 24px;
   max-height: calc(100vh - 36px); overflow-y: auto;
 }
@@ -325,15 +326,19 @@ textarea { resize: vertical; }
 .sheet-side-line { font-size: 21px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; }
 .sheet-side-line.side-sell { color: var(--down); }
 .sheet-side-line.side-buy { color: var(--up); }
-/* 총액 행(좌라벨 700 / 우값 800 대형) */
-.total-row { display: flex; justify-content: space-between; align-items: baseline; margin: 26px 0 4px; }
-.total-row .label { font-size: 17px; font-weight: 700; color: var(--ink); }
-.total-row .value { font-size: 21px; font-weight: 800; color: var(--ink); }
-.dotted-hr { border: 0; border-top: 2px dotted var(--dotted); margin: 14px 0 10px; }
+/* 총액 행(좌라벨 700 / 우값 800 대형 — QA: 실앱은 헤더 아래 큰 호흡 + 라벨도 대형) */
+.total-row { display: flex; justify-content: space-between; align-items: baseline; margin: 40px 0 4px; }
+.total-row .label { font-size: 19px; font-weight: 700; color: var(--ink); }
+.total-row .value { font-size: 22px; font-weight: 800; color: var(--ink); }
+/* 점선 — 실앱의 성긴 원형 점 질감(QA: CSS dotted는 너무 촘촘) */
+.dotted-hr {
+  border: 0; height: 2.5px; margin: 14px 0 10px;
+  background: radial-gradient(circle, var(--dotted) 1.2px, transparent 1.4px) left center / 8px 2.5px repeat-x;
+}
 /* "주문 자세히 보기" 행(장식 — 항상 펼침, 스펙 §2.8 아코디언 형태 계승) */
 .accordion-row {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 14px; color: var(--sub); padding: 2px 0 6px;
+  font-size: 15px; color: var(--sub); padding: 2px 0 6px;
 }
 .acc-caret { color: var(--axis); font-size: 15px; font-weight: 700; }
 /* 시트 버튼 행 — 닫기:주버튼 = 1:2.05(스펙 §2.8 확정) */
@@ -368,8 +373,13 @@ textarea { resize: vertical; }
 .sheet-row:last-child { border-bottom: none; }
 .sheet-row span:last-child { color: var(--ink); font-weight: 600; text-align: right; }
 .sheet-row b { font-weight: 800; color: var(--ink); }
-#order-sheet .sheet-row { border-bottom: 2px dotted var(--dotted); }
-#order-sheet .sheet-row:last-child { border-bottom: none; }
+/* 주문 확인 시트 상세 행 — 성긴 원형 점선 + 중회색 라벨 + 값 미디엄(QA 중2·중3·하5) */
+#order-sheet .sheet-row {
+  border-bottom: none; color: var(--ink-3);
+  background: radial-gradient(circle, var(--dotted) 1.2px, transparent 1.4px) left bottom / 8px 2.5px repeat-x;
+}
+#order-sheet .sheet-row:last-child { background: none; }
+#order-sheet .sheet-row span:last-child { font-weight: 500; }
 .notice-item { font-size: 14.5px; padding: 6px 0; color: var(--ink-2); line-height: 1.5; }
 .notice-item .no { font-weight: 800; color: var(--warn); margin-right: 6px; }
 
@@ -421,31 +431,55 @@ textarea { resize: vertical; }
   border-top: 6px solid var(--ink);
 }
 .price-head.kp { border-bottom: none; padding: 0 0 2px; margin-bottom: 0; }
-.price-head.kp .nm { font-size: 23px; font-weight: 700; }
+.price-head.kp .nm { font-size: 25px; font-weight: 700; }
 .price-head.kp .pr { font-size: 33px; letter-spacing: -.035em; margin: 6px 0 0; }
-.kp-chg-row { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; margin-top: 6px; }
-.kp-chg-row .mk { margin: 0; font-size: 14px; font-weight: 400; color: var(--sub); }
+.kp-chg-row { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; margin-top: 6px; }
+.kp-chg-row .mk { margin: 0; font-size: 14.5px; font-weight: 400; color: var(--sub); }
 /* 탭 스트립 — #phone 좌우 패딩(20px)까지 풀블리드(스펙 §2.3) */
 .kp-tabs { display: flex; margin: 10px -20px 0; padding: 0 12px; border-bottom: 1px solid var(--line); }
 .kp-tab {
   position: relative; flex: 1; text-align: center;
-  padding: 12px 0 11px; font-size: 16.5px; font-weight: 500; color: var(--sub);
+  padding: 13px 0 12px; font-size: 17.5px; font-weight: 500; color: var(--sub);
 }
 .kp-tab.on { color: var(--ink); font-weight: 700; box-shadow: inset 0 -3px 0 var(--ink); }
 .kp-dot {
   position: absolute; margin: 3px 0 0 1px; width: 5px; height: 5px;
   border-radius: 50%; background: var(--alert-dot);
 }
-.kp-stat-row { display: flex; justify-content: space-between; font-size: 14.5px; color: var(--ink-2); padding: 12px 0 6px; }
+.kp-stat-row { display: flex; align-items: center; gap: 16px; font-size: 16px; color: var(--ink-2); padding: 12px 0 8px; }
 .kp-stat-row b { color: var(--ink); font-weight: 700; }
-.kp-chart { margin: 2px 0 4px; }
-.kp-chart svg { width: 100%; height: 118px; display: block; }
-.kp-range { display: flex; gap: 6px; padding: 4px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
-.kp-range-chip {
-  flex: 1; text-align: center; font-size: 14.5px; font-weight: 500;
-  color: var(--sub); padding: 8px 0; border-radius: 9px;
+.kp-stat-right { margin-left: auto; }
+.kp-stat-fold {
+  width: 34px; height: 28px; border-radius: 8px; background: var(--chip-gray);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-2); font-size: 14px; font-weight: 700; flex: none;
 }
+.kp-help {
+  width: 17px; height: 17px; border-radius: 50%; background: #c6ccd3; color: #fff;
+  font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+/* 차트 — 실앱급 대형(QA 갭1: 높이·우측 가격 눈금·면 채움 제거) */
+.kp-chart { position: relative; margin: 4px 0 6px; padding-right: 56px; }
+.kp-chart svg { width: 100%; height: 226px; display: block; }
+.kp-axis {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 52px;
+  border-left: 1px solid var(--line);
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-size: 12.5px; color: var(--axis); padding: 2px 0 2px 8px;
+  font-variant-numeric: tabular-nums;
+}
+/* 기간 칩 2줄(기간 + 기간 수익률 — QA 갭2) + 우측 아이콘 */
+.kp-range { display: flex; gap: 4px; align-items: center; padding: 6px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.kp-range-chip {
+  flex: 1; text-align: center; font-size: 15px; font-weight: 500;
+  color: var(--sub); padding: 6px 0 7px; border-radius: 12px; line-height: 1.25;
+}
+.kp-range-chip .pct { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+.kp-range-chip .pct.dn { color: var(--down); }
+.kp-range-chip .pct.up { color: var(--up); }
 .kp-range-chip.on { background: var(--chip-gray); color: var(--ink); font-weight: 700; }
+.kp-range-ic { width: 24px; height: 24px; flex: none; margin-left: 4px; }
+.kp-range-ic svg { width: 100%; height: 100%; }
 
 /* 실앱 주문 화면 재현(S0·⑧ — 계약 §9 재현 화면 규칙) */
 .btn.order-fake { color: #fff; border: none; }
@@ -453,8 +487,8 @@ textarea { resize: vertical; }
 .btn.order-fake.side-sell { background: var(--down); }
 /* 구매/판매 좌우 병렬(실앱 하단 CTA — 스펙 §2.7) — row-reverse:
    DOM(buy,sell)→화면(판매 좌/구매 우). 동일 크기·색 구분만(§14·D-0717-2121). */
-.order-cta-row { display: flex; flex-direction: row-reverse; gap: 10px; margin-top: 14px; }
-.order-cta-row .btn { margin-top: 0; flex: 1; width: auto; height: 54px; font-size: 18px; }
+.order-cta-row { display: flex; flex-direction: row-reverse; gap: 18px; margin-top: 14px; }
+.order-cta-row .btn { margin-top: 0; flex: 1; width: auto; height: 56px; font-size: 20px; font-weight: 700; }
 
 @media (max-width: 460px) {
   #phone, #safemode-screen { margin: 10px 8px 28px; padding: 14px 16px 20px; }
