@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0035-main · next_questions 서비스 내 착지로 교체(D-0718-0028)
+**요청** — "LLM 질문이 서비스 내 확인 지점으로 안내하거나 정보를 제공해야 하는데 지금 API로 받기 어려우니, 현 구현 범위에서 제공 가능한 질문으로 교체하자".
+**수행 작업** — ① 계약 §6에 next_questions 행 신설(착지=서비스 안: 제공 데이터·다음 단계 화면 / 외부 확인 필요 정보는 unknowns 전용) ② 프롬프트 규칙 9 추가(서비스의 다음 화면 목록 제공 + 외부 착지 질문 금지) ③ 캐시 3종 재생성 — 질문이 계획 대조·체크리스트·수량별 시나리오 비교·모의 체결·투자 일지 착지로 전환, 실적 일정·수급 주체·업계 비교는 unknowns로 이동(loss8은 '지난 분기 기록' 경계선 질문 1건으로 1회 재생성 후 확정).
+**변경 파일** — docs/requirements-contract.md(§6), src/briefing/llm.py, data/fixtures/llm_cache/*(3종), Decisionlog.md(D-0718-0028-main), Worklog.md
+**검증** — 재생성분 질문 전수 검수(착지 확인: loss8 3문·profit15 3문·first_buy 4문 전부 서비스 안). pytest 289건 통과, 안전 게이트 통과(gate_20260718_0031), 실브라우저 ② 렌더·배지·콘솔 0 확인. 정합 QA: 정적 경로 질문은 기존에 이미 규칙 부합(무변경), 계약↔프롬프트↔캐시 3자 일치.
+**판단 근거** — D-0718-0028-main(서비스가 답 못 하는 확인 유도 = 신뢰 공백, unknowns/질문 역할 분리).
+**결과** — 완료. fixture 무변경이라 지문 유지. 다음 단계 S6/S7 — 사용자 지시 대기(S7 우선 권장).
+
 ### W-0717-2355-main · 캐시 실LLM 교체 완료(3종 실생성·테스트 이원화 — D-0717-2355)
 **요청** — 캐시 전략 선택지 제시에 사용자 응답 "실생성 교체 (권장)".
 **수행 작업** — ① 프롬프트 보강(실호출 관찰 결함 교정: facts는 공시·시세만 — 보유·계획·계좌 제외, basis에는 source_id만) ② `gen_llm_cache.py` 실LLM 모드로 3종 재생성(generated_by=anthropic:claude-sonnet-5·guard 통과분만 저장·fixture 지문 동결) ③ 테스트 이원화: conftest 기본 client=briefing_mode "static"(콘텐츠 골든 단언 유지), test_briefing_sources에 cache_client 분리(원천 선택·구조·감사로그 검증 + 기본 client=static 명시 테스트 1건 신설) ④ .env에 BRIEFING_MODE=cache 추가(시연 기본 — 즉시 로드+실LLM 문장, 라이브 시연 시 해당 줄 삭제).
