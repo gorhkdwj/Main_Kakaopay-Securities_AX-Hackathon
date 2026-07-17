@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0349-main · 매수 후 비중 총자산 기준 전환 — 기존 보유 누락 오류 수정(D-0718-0335)
+**요청** — "가온전자 판매 시 보유 30주인데 구매 시 보유 0처럼 계산됨. 다른 시나리오도 확인 바람" → 실측 진단 보고 후 "수정해줘".
+**수행 작업** — 진단(엔진 실측): "구매 후 비중"이 이번 매수분 ÷ 예수금이라 loss8·profit15에서 기존 보유 누락(셋 다 46.0%·잘못된 집중도 경고), first_buy만 우연히 정확. 수정: ① 계약 §4 매수 후 비중 정의 변경(분자=매수 후 종목 총 평가액[기존 보유+이번 매수], 분모=portfolio_total_value 총자산 — 매도 잔여 비중과 동일 대칭)·§13 대장 해소 ② calculator.py buy_preview·_compute_buy에 portfolio_total_value 인자(None이면 cash 폴백)·비중 재계산 ③ app.py에 fx.portfolio_total_value 전달 ④ 테스트 정정·신규.
+**변경 파일** — docs/requirements-contract.md(§4·§13), src/engine/calculator.py, src/webapp/app.py, tests/engine/test_buy_preview.py(신규 4건), tests/webapp/test_integration_flows.py(test_i01b 정정), Decisionlog.md(D-0718-0335-main)
+**검증** — pytest 302건 전체 통과(first_buy 46.0% 골든 유지 확인·loss8 37.6%·profit15 28.2% 신규 골든). playwright 실브라우저 3시나리오 구매 ④: loss8 37.6%(경고 없음)·평단 49,000 / profit15 28.2%(경고 없음)·평단 42,000 / first_buy 46.0%(경고 유지)·평단 46,000 — 잘못된 집중도 경고 소거 확인, 콘솔 0. 게이트 통과(gate_20260718_0348).
+**판단 근거** — D-0718-0335-main(매도 잔여 비중과 동일 총자산 분모로 양방향 대칭·기존 보유 누락 오답 수정·허위 위험 신호 제거). D-0718-0225의 cash 고정 결정 번복.
+**결과** — 완료. fixture 무변경(캐시 무영향). 다음: S7.
+
 ### W-0718-0327-main · 구매 '현 상태 유지' 라벨 보유 유무 분기(D-0718-0327)
 **요청** — "구매 탭은 그대로 유지가 아니라 구매하지 않기인 이유는?" → 분석 후 "b로 반영해줘"(보유 유무 분기안).
 **수행 작업** — 계약 §9(버튼 위계·④ 표 구성) 선행 갱신 후 app.js에 buyKeepLabel() 헬퍼 신설(보유>0 "그대로 유지" / 보유 0 "구매하지 않기") — ④ 표 현 상태 유지 열 헤더·⑤ 첫 버튼이 이 함수를 공유해 정합. "그대로 유지"는 VALID_INTENTS 기존 원소라 서버·orderPlanFromIntent 무변경.

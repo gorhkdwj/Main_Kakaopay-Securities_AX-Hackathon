@@ -183,8 +183,9 @@ def test_i03_profit15_preview_sign_and_settle(client):
 def test_i01b_loss8_buy_direction_flow(client, records_dir):
     """양방향(D-0718-0225): 보유 시나리오에서도 구매 검토 계산·체결·기록이 성립한다.
 
-    세 시나리오의 현재가·예수금이 동일하므로 매수 골든값은 first_buy(§5.2-c)와
-    완전 공유된다 — 8주 368,055(경고 없음)·10주 460,069(집중도 경고 46.0%).
+    비용(총 결제·수수료)은 first_buy와 공유하나, 매수 후 비중은 **기존 보유를
+    포함한 총자산 기준**(D-0718-0335) — loss8은 보유 30주가 있어 first_buy(보유 0,
+    46.0%)와 다르다: 매수 후 40주×46,000 ÷ 4,900,000 = 37.6%, 경고 없음.
     """
     # 서버 기본 방향은 보유 기반 sell 유지(meta.side — 클라이언트 flowSide가 오버라이드)
     data = client.get("/api/scenario/loss8").json()
@@ -195,14 +196,15 @@ def test_i01b_loss8_buy_direction_flow(client, records_dir):
                      json={"scenario_id": "loss8", "side": "buy", "qty": 8}).json()["preview"]
     assert p8["total_cost"] == 368_055
     assert p8["tax"] == 0
-    assert p8["concentration_warning"] is False
 
     p10 = client.post("/api/preview",
                       json={"scenario_id": "loss8", "side": "buy", "qty": 10}).json()["preview"]
     assert p10["total_cost"] == 460_069
     assert p10["remaining_cash"] == 539_931
-    assert p10["weight_after_pct"] == 46.0
-    assert p10["concentration_warning"] is True
+    # 보유 30주 포함 총자산 기준 — first_buy 46.0%와 달리 37.6%·경고 없음
+    assert p10["weight_after_pct"] == 37.6
+    assert p10["concentration_warning"] is False
+    assert p10["avg_price_after"] == 49_000  # (30×50,000 + 460,000) ÷ 40
 
     st = client.post("/api/settle",
                      json={"preview": p10, "confirmed_qty": 10}).json()["settlement"]

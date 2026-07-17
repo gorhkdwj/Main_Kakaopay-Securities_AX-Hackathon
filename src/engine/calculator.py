@@ -218,11 +218,14 @@ def _compute_buy(
     trade_date: "str | datetime.date",
     holding_qty: int = 0,
     avg_price: "int | None" = None,
+    portfolio_total_value: "int | None" = None,
 ) -> dict:
     """매수 미리보기 순수 계산(검증 포함, ID 미발급). 골든값: 계약 §5.2-c.
 
     holding_qty·avg_price는 '체결 후 평균 구매가(예상)' 계산용(계약 §5.1 —
     사용자 요청 2026-07-18). 보유 0이면 평균 구매가 = 기준가.
+    portfolio_total_value는 매수 후 비중의 분모(계약 §4 — 매도 잔여 비중과
+    동일한 총자산 고정). None이면 cash로 폴백(first_buy는 cash==총자산이라 동일).
     """
     _validate_qty(qty)
     _validate_int(price, "price(기준가)")
@@ -230,6 +233,8 @@ def _compute_buy(
     _validate_int(holding_qty, "holding_qty(보유수량)", minimum=0)
     if holding_qty > 0:
         _validate_int(avg_price, "avg_price(평균 구매가)")
+    if portfolio_total_value is not None:
+        _validate_int(portfolio_total_value, "portfolio_total_value(총자산)")
     trade_date_iso = _validate_trade_date(trade_date)
 
     gross = price * qty                     # 매수대금
@@ -241,8 +246,11 @@ def _compute_buy(
             " — 주문을 만들 수 없습니다"
         )
     remaining_cash = cash - total_cost      # 잔여 예수금
-    # 매수 후 비중 분모 = 매수 전 예수금 총액 고정(계약 §4) / 분자 = 매수 후 평가액
-    weight_after_pct = _pct(gross, cash)
+    # 매수 후 비중(계약 §4) = 매수 후 이 종목 총 평가액 ÷ 총자산 고정 — 매도 잔여
+    # 비중과 동일한 분모(양방향 대칭). 분자에 기존 보유 평가를 포함한다(D-0718-0335).
+    # first_buy(보유 0·전액 현금)는 이번 매수분 ÷ 예수금과 동일값(46.0%).
+    total_value = portfolio_total_value if portfolio_total_value is not None else cash
+    weight_after_pct = _pct((holding_qty + qty) * price, total_value)
     # 체결 후 평균 구매가(예상) — 순수 매입가 기준(수수료 미포함)·원 미만 절사(계약 §5.1)
     avg_price_after = (holding_qty * (avg_price or 0) + gross) // (holding_qty + qty)
 
@@ -255,6 +263,7 @@ def _compute_buy(
             "trade_date": trade_date_iso,
             "holding_qty": holding_qty,
             "avg_price": avg_price,
+            "portfolio_total_value": portfolio_total_value,
         },
         "gross_amount": gross,
         "fee": fee,
@@ -320,6 +329,7 @@ def buy_preview(
     trade_date: "str | datetime.date",
     holding_qty: int = 0,
     avg_price: "int | None" = None,
+    portfolio_total_value: "int | None" = None,
 ) -> dict:
     """매수 주문 미리보기를 계산한다(계약 §5 — 골든값 §5.2-c).
 
@@ -331,8 +341,10 @@ def buy_preview(
         price: 기준가(원).
         cash: 가용 예수금(원) — 매수 한도 검증·매수 후 비중의 고정 분모.
         trade_date: 체결 기준일("YYYY-MM-DD" 또는 date).
-        holding_qty: 기존 보유수량(주, 기본 0) — 체결 후 평균 구매가 계산용(§5.1).
+        holding_qty: 기존 보유수량(주, 기본 0) — 체결 후 평균 구매가·매수 후 비중 계산용.
         avg_price: 기존 평균 구매가(원) — holding_qty>0일 때 필수.
+        portfolio_total_value: 총자산(원) — 매수 후 비중 분모(계약 §4). None이면
+            cash 폴백(first_buy는 총자산==예수금이라 동일). 보유가 있으면 전달 필수.
 
     Returns:
         JSON 직렬화 가능한 dict:
@@ -350,7 +362,8 @@ def buy_preview(
         EngineInputError: 그 외 입력 형식 오류.
         (오류 시 계산 결과·calculation_id를 생성하지 않는다 — 계약 §5.3)
     """
-    result = _compute_buy(qty, price, cash, trade_date, holding_qty, avg_price)
+    result = _compute_buy(qty, price, cash, trade_date, holding_qty, avg_price,
+                          portfolio_total_value)
     return {"calculation_id": _next_calculation_id(), **result}
 
 

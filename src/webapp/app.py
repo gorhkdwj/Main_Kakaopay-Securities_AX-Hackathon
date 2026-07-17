@@ -595,6 +595,7 @@ def create_app(fixtures_dir: "Path | str | None" = None,
                     qty, fx["price"]["close"], fx.get("cash", 0), fx["trade_date"],
                     holding_qty=holding.get("qty") or 0,
                     avg_price=holding.get("avg_price"),
+                    portfolio_total_value=fx.get("portfolio_total_value"),
                 )
         except EngineInputError as exc:
             # 계약 §5.3: 오류 메시지 + 재입력 — 계산 기록 미생성

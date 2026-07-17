@@ -139,3 +139,39 @@ def test_sell_avg_price_unchanged_and_full_sell_none():
     assert partial["avg_price_after"] == 50_000
     full = sell_preview(30, 46_000, 50_000, 30, 4_900_000, "2026-07-17")
     assert full["avg_price_after"] is None
+
+
+class TestBuyWeightIncludesHolding:
+    """매수 후 비중 = 기존 보유 포함 총자산 기준(계약 §4 — D-0718-0335).
+
+    구 정의(이번 매수분 ÷ 예수금)는 보유 시나리오에서 기존 보유를 누락하고
+    잘못된 집중도 경고를 냈다. first_buy(보유 0)는 46.0% 불변, 보유 시나리오만 정정.
+    """
+
+    def test_loss8_holding_30_weight_is_total_asset_based(self):
+        # 매수 후 40주×46,000 = 1,840,000 ÷ 총자산 4,900,000 = 37.6%
+        r = buy_preview(10, 46_000, 1_000_000, "2026-07-17",
+                        holding_qty=30, avg_price=50_000,
+                        portfolio_total_value=4_900_000)
+        assert r["weight_after_pct"] == 37.6
+        assert r["concentration_warning"] is False  # 40% 아래 — 잘못된 경고 없음
+
+    def test_profit15_holding_20_weight(self):
+        # 매수 후 30주×46,000 = 1,380,000 ÷ 4,900,000 = 28.2%
+        r = buy_preview(10, 46_000, 1_000_000, "2026-07-17",
+                        holding_qty=20, avg_price=40_000,
+                        portfolio_total_value=4_900_000)
+        assert r["weight_after_pct"] == 28.2
+        assert r["concentration_warning"] is False
+
+    def test_first_buy_unchanged_46pct(self):
+        # 보유 0·전액 현금 — 총자산==예수금이라 46.0% 불변(골든값 §5.2-c 유지)
+        r = buy_preview(10, 46_000, 1_000_000, "2026-07-17",
+                        portfolio_total_value=1_000_000)
+        assert r["weight_after_pct"] == 46.0
+        assert r["concentration_warning"] is True
+
+    def test_ptv_none_falls_back_to_cash(self):
+        # 하위 호환: ptv 미전달 시 cash 폴백(first_buy 단순 케이스 — 동일값)
+        r = buy_preview(10, 46_000, 1_000_000, "2026-07-17")
+        assert r["weight_after_pct"] == 46.0
