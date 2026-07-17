@@ -15,6 +15,14 @@
 
 ---
 
+### W-0717-2355-main · 캐시 실LLM 교체 완료(3종 실생성·테스트 이원화 — D-0717-2355)
+**요청** — 캐시 전략 선택지 제시에 사용자 응답 "실생성 교체 (권장)".
+**수행 작업** — ① 프롬프트 보강(실호출 관찰 결함 교정: facts는 공시·시세만 — 보유·계획·계좌 제외, basis에는 source_id만) ② `gen_llm_cache.py` 실LLM 모드로 3종 재생성(generated_by=anthropic:claude-sonnet-5·guard 통과분만 저장·fixture 지문 동결) ③ 테스트 이원화: conftest 기본 client=briefing_mode "static"(콘텐츠 골든 단언 유지), test_briefing_sources에 cache_client 분리(원천 선택·구조·감사로그 검증 + 기본 client=static 명시 테스트 1건 신설) ④ .env에 BRIEFING_MODE=cache 추가(시연 기본 — 즉시 로드+실LLM 문장, 라이브 시연 시 해당 줄 삭제).
+**변경 파일** — src/briefing/llm.py, data/fixtures/llm_cache/*(3종 실생성), tests/webapp/{conftest,test_briefing_sources}.py, .env(Git 제외), Decisionlog.md(D-0717-2355-main), Worklog.md
+**검증** — 캐시 내용 검수(프롬프트 보강 반영: facts 3건 공시·시세 한정·basis=source_id·양면 해석·시나리오별 fixture 값 정확 인용). pytest 289건 전체 통과. 안전 게이트 통과(실생성 캐시 스위프: 3종 차단 0·카운터 0·양면 해석). playwright 실브라우저: ② 실LLM 문장 렌더+"준비된 응답(캐시)" 배지, 완주 회귀(⑥ 체결→⑦ 일지→⑧ 판단 기록 카드), 콘솔 오류·경고 0.
+**판단 근거** — D-0717-2355-main(시연 문장 진정성+로드 속도 동시 확보, 생성물 문구 비단언 원칙).
+**결과** — 완료. S5 전 범위 종결(라이브 실검증 포함). 유의: fixture를 수정하면 캐시 지문이 어긋나 static으로 강등되므로 재생성 필요(게이트가 감지). 다음 단계 S6(스냅샷·선택) 또는 S7(리허설) — 사용자 지시 대기.
+
 ### W-0717-2347-main · Claude 라이브 실호출 검증 성공(3결함 수정 — T-0717-2340)
 **요청** — "api키 넣었음. 이제 테스트 해볼래?".
 **수행 작업** — ① 키 배치 안전 확인(마스킹 검사: `.env`에만 존재·추적 파일 `.env.example`은 깨끗·git check-ignore 통과) ② 실호출 3연속 실패를 순차 진단·수정(T-0717-2340: temperature 파라미터 거부→제거 / max_tokens 2000 절단→4000 / 실소요 10~22초 실측→타임아웃 이원화 auto 8초·live 30초) ③ 최종 검증: live 모드 22.3초 성공 — guard(숫자 대사·출처 실재 포함) 차단 0·경고 0, 양면 해석·구체적 unknowns 3건·쉬운 해요체 확인.

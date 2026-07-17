@@ -63,12 +63,14 @@ def records_dir(tmp_path) -> Path:
 def client(records_dir, tmp_path) -> TestClient:
     """기본 fixture(data/fixtures)를 쓰는 새 앱 클라이언트(세션 카운터 0에서 시작).
 
-    briefing_mode="cache"로 고정한다 — 사용자 .env에 ANTHROPIC_API_KEY가 있어도
-    테스트가 라이브 호출을 시도하지 않게(네트워크 0회 원칙). 원본 fixture는
-    캐시 지문이 일치하므로 cache 경로, 변형 fixture는 static 폴백이 된다.
+    briefing_mode="static"으로 고정한다(네트워크 0회 + 결정론) — 이 스위트의
+    콘텐츠 골든 단언(특정 문구·source_id 순서)은 정적 조립(compose_briefing)
+    경로의 검증이다. 캐시는 실LLM 생성물(문구 비고정 — D-0717-2310 재생성)이라
+    문구를 단언하지 않는다: cache 경로는 test_briefing_sources.py(원천 선택·
+    폴백·감사로그)와 tests/briefing(캐시 무결성 — guard 무차단)이 담당한다.
     """
     return TestClient(create_app(records_dir=records_dir,
-                                 briefing_mode="cache",
+                                 briefing_mode="static",
                                  audit_dir=tmp_path / "audit"))
 
 

@@ -27,6 +27,7 @@
 | 14 | D-0717-2121-main | 상시 인터셉트 확정(S0=주문 화면+진입 팝업으로 시연 시작) + 재현 화면 방향 중립화(§14 해석 정련) | 채택 |
 | 15 | D-0717-2310-main | S5 브리핑 원천 설계: 폴백 사슬(live→cache→static)·캐시 fixture 지문 대조·초기 캐시=정적 조립 기반 초안(출처 명시) | 채택 |
 | 16 | D-0717-2323-main | LLM 공급자 OpenAI → Anthropic(Claude API) 교체 — httpx REST 직행·기본 모델 claude-sonnet-5 | 채택 |
+| 17 | D-0717-2355-main | 캐시 실LLM 교체 + 테스트 이원화(콘텐츠 골든=static 경로·캐시=구조·가드 검증) + 시연 기본 BRIEFING_MODE=cache | 채택 |
 
 ---
 
@@ -374,3 +375,22 @@ S5(LLM 브리핑 결합) 착수 시점에 OpenAI 키 미확보(.env 없음). 완
 **영향** — src/briefing/llm.py(call_anthropic·상수·docstring), scripts/briefing/gen_llm_cache.py(generated_by "anthropic:모델"), tests/briefing(격리 env 키 명칭)·tests/webapp/conftest 주석, README(AI 브리핑 절 — 키 발급처 console.anthropic.com), requirements.txt. 계약 §8·§9는 공급자 중립 표현이라 무변경. D-0716-1026의 OpenAI 항목은 본 결정으로 대체.
 
 **재검토 조건** — live 실호출 검증 시 JSON 형식 준수율·한국어 품질·지연이 미달이면 모델 변경(ANTHROPIC_MODEL) 또는 캐시 모드 고정, Anthropic API 버전 헤더(2023-06-01) 변경 공지 시 상수 갱신.
+
+### D-0717-2355-main · 캐시 실LLM 교체 + 테스트 이원화 + 시연 기본 cache 모드
+
+**상황**
+Claude 라이브 실호출 검증 성공(W-0717-2347) 후 캐시가 정적 조립 초안인 상태. 실측 지연(생성 10~22초)으로 시연 중 라이브는 화면 지연을 만들고, 기존 웹앱 테스트는 브리핑의 특정 문구·source_id 순서를 단언(정적 조립 기준). 사용자 선택: "실생성 교체 (권장)".
+
+**검토한 선택지**
+① 캐시 현행 유지(정적 초안 — 라이브는 Q&A용) ② **캐시 실생성 교체 + 테스트 이원화** ③ 실생성 + 기존 문구 단언을 캐시에 맞게 재작성(생성물 문구 고정 — 재생성마다 깨짐).
+
+**결정** — ② 채택.
+- 프롬프트 보강 후 재생성: facts는 공시·시세만(보유·계획·계좌 제외 — 화면의 다른 카드 소관), basis에는 source_id만. 3종 모두 guard 통과분으로 저장(generated_by=anthropic:claude-sonnet-5).
+- **테스트 이원화**: 콘텐츠 골든 단언(문구·순서)은 conftest 기본 client의 **static 경로**에서 유지(원래 그 경로의 검증이었음), **cache 경로**는 전용 cache_client로 원천 선택·폴백·감사로그·구조(출처·양면·unknowns)·가드 무차단만 검증 — LLM 생성물의 문구는 단언하지 않는다(재생성 내성).
+- **시연 기본 모드 = cache**(.env에 BRIEFING_MODE=cache): 즉시 로드 + 심사위원이 보는 문장이 실제 Claude 생성물. 라이브 시연이 필요하면 해당 줄을 지우고 live로(약 20초 대기 수반).
+
+**근거** — ① 시연 문장의 진정성(실LLM)과 로드 속도를 캐시로 동시 확보 ② 문구 고정 단언은 생성물에 부적합(재생성마다 파손 — 실패 테스트 완화 금지 원칙과 충돌 유발) ③ static 경로 골든 단언은 폴백 최종 계층의 결정론 검증으로 계속 유효 ④ auto 모드는 키 존재 시 매 로드 8초 소모(T-0717-2340 실측).
+
+**영향** — src/briefing/llm.py(프롬프트), data/fixtures/llm_cache/ 3종(실생성), tests/webapp/conftest.py(기본 client=static)·test_briefing_sources.py(cache_client 분리·구조 단언), .env(BRIEFING_MODE=cache — Git 제외), 289 tests.
+
+**재검토 조건** — fixture 수정 시 캐시 재생성 필수(지문 불일치 → static 강등을 테스트·게이트가 감지), 본선 당일 라이브 시연 여부는 발표 리허설(S7)에서 확정, 재생성 시 게이트·캐시 무결성 테스트 재실행.
