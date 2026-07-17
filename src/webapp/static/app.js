@@ -299,15 +299,48 @@ function renderAll() {
 }
 
 /* 주문 화면 재현 공용(S0 진입·⑧ 종착 — 계약 §9): 표시만.
-   side 강조 없음 — 구매/판매 병렬·색 구분만(전 시나리오 공통, D-0717-2121). */
+   side 강조 없음 — 구매/판매 병렬·색 구분만(전 시나리오 공통, D-0717-2121).
+   실앱 종목 상세 크롬 재현(캡처 27 — 리디자인 S3): 네비 행·탭·거래량 행·차트·기간 칩은
+   전부 비기능 장식(span·aria-hidden — 버튼 아님·배선 없음)이다. 수치는 가상 fixture 장식
+   [데모 고정]. 차트 방향은 이미 렌더 중인 change_pct 부호를 따른다(표시 전용). */
+function replicaChartSvg(changePct) {
+  const down = "0,26 28,20 52,38 78,30 106,52 134,46 162,66 190,58 214,78 242,72 270,88 300,82 330,94 360,98";
+  const flat = "0,60 30,56 60,63 90,58 120,64 150,59 180,62 210,57 240,63 270,59 300,62 330,58 360,61";
+  const pts = changePct < 0 ? down
+    : changePct > 0 ? down.split(" ").map(p => { const [x, y] = p.split(","); return `${x},${120 - y}`; }).join(" ")
+    : flat;
+  const color = changePct < 0 ? "var(--down)" : changePct > 0 ? "var(--up)" : "var(--flat)";
+  return `<div class="kp-chart" aria-hidden="true"><svg viewBox="0 0 360 120" preserveAspectRatio="none">
+    <line x1="0" y1="30" x2="360" y2="30" stroke="#f2f4f6" stroke-width="1"/>
+    <line x1="0" y1="60" x2="360" y2="60" stroke="#f2f4f6" stroke-width="1"/>
+    <line x1="0" y1="90" x2="360" y2="90" stroke="#f2f4f6" stroke-width="1"/>
+    <polyline points="${pts} 360,120 0,120" fill="${color}" opacity=".05" stroke="none"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg></div>`;
+}
+
 function renderOrderReplica(prefix) {
   const m = S.data.meta;
   const name = m.instrument ? m.instrument.name : "";
-  el(prefix + "-header").innerHTML = `<div class="price-head">
-    <div><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span>
-      <span class="mk">${esc(m.market_label)}</span></div>
-    <div><span class="pr">${num(m.price.close)}</span>원 ${pctChange(m.price.change_pct)}</div>
-  </div>`;
+  el(prefix + "-header").innerHTML = `
+  <div class="kp-nav" aria-hidden="true">
+    <svg class="kp-ic" viewBox="0 0 24 24"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="kp-nav-sp"></span>
+    <svg class="kp-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.2 4.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <svg class="kp-ic" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4.5L6 21z" fill="#ffd338"/></svg>
+    <svg class="kp-ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+  </div>
+  <div class="price-head kp">
+    <div class="kp-nm-row"><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span><span class="kp-caret" aria-hidden="true"></span></div>
+    <div><span class="pr">${num(m.price.close)}원</span></div>
+    <div class="kp-chg-row">${pctChange(m.price.change_pct)} <span class="mk">${esc(m.market_label)}</span></div>
+  </div>
+  <div class="kp-tabs" aria-hidden="true">
+    <span class="kp-tab on">정보</span><span class="kp-tab">차트<i class="kp-dot"></i></span><span class="kp-tab">호가<i class="kp-dot"></i></span><span class="kp-tab">보유</span><span class="kp-tab">토론<i class="kp-dot"></i></span>
+  </div>
+  <div class="kp-stat-row" aria-hidden="true"><span>거래량 <b>1,842,113</b></span><span>시가총액 <b>3.2조원</b></span></div>
+  ${replicaChartSvg(m.price.change_pct)}
+  <div class="kp-range" aria-hidden="true"><span class="kp-range-chip">1일</span><span class="kp-range-chip on">1주</span><span class="kp-range-chip">1달</span><span class="kp-range-chip">3달</span><span class="kp-range-chip">1년</span></div>`;
   el(prefix + "-price").textContent = won(m.price.close);
   const st = S.settlement;
   el(prefix + "-qty").textContent = st ? num(st.qty) + "주" : "—";
