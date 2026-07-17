@@ -1,24 +1,43 @@
-/* 판단 여권 · S4 데모 스타일 — 실앱 룩앤필 계승(스펙 §3)
-   외부 CDN·폰트·이미지 0 — 시스템 폰트만 사용(오프라인 원칙).
-   색 규약: 상승 빨강 ▲ / 하락 파랑 ▼ (국내 관례) · 구매 버튼 빨강 / 판매 버튼 파랑.
-   손익은 색+부호+아이콘+텍스트 4중 표기(계약 §9 — 색각이상 대응). */
+/* 판단 여권 · S4 데모 스타일 — 실앱(카카오페이증권) 룩앤필 계승 리디자인
+   외부 CDN·폰트·이미지 0 — 시스템 폰트만(오프라인 자기완결 원칙).
+   색 규약: 상승 빨강 ▲ / 하락 파랑 ▼ (국내 관례) · 구매 빨강 / 판매 파랑.
+   손익은 색+부호+아이콘+텍스트 4중 표기(계약 §9 — 색각이상 대응).
+   리디자인 근거: docs/references/image 실앱 캡처(로컬 전용) — 흰 배경·큰 볼드 타이포·
+   넉넉한 여백·둥근 pill 버튼·점선 구분·연회색 보조텍스트(모던 한국 핀테크 미감). */
 
 :root {
-  --bg: #eef0f3;            /* 페이지 배경(회색) */
+  /* ── 뉴트럴(면·선·글자) ── */
+  --bg: #f2f4f6;            /* 페이지 배경(쿨 그레이) */
   --card: #ffffff;          /* 카드 배경 */
-  --ink: #191d22;           /* 본문 */
-  --sub: #69727c;           /* 보조 텍스트 */
-  --line: #e2e5e9;          /* 경계선 */
-  --up: #d1372f;            /* 상승·구매(빨강) */
-  --down: #1265c0;          /* 하락·판매(파랑청) */
-  --flat: #4a525b;
-  --dark: #131a22;          /* 주요 진행 버튼(어두운 pill) */
-  --fact: #e7f4ec;  --fact-ink: #0e7a3d;
-  --interp: #fdf3d7; --interp-ink: #946a00;
-  --unk: #eceef1;   --unk-ink: #6a7280;
-  --buzz: #f3e8fd;  --buzz-ink: #7b3fbf;
-  --warnbg: #fdeede; --warn: #b4550a;
-  --badge: #eef4fb; --badge-ink: #0b62c4;
+  --card-sub: #f7f8fa;      /* 카드 안 옅은 면 */
+  --ink: #191f28;           /* 본문·주요 텍스트 */
+  --ink-2: #4e5968;         /* 보조(진회색) */
+  --sub: #8b95a1;           /* 3차(연회색) */
+  --line: #e5e8eb;          /* 경계선 */
+  --line-2: #eef1f4;        /* 옅은 경계 */
+
+  /* ── 의미색(등락·매매) ── */
+  --up: #e5443b;            /* 상승·구매(빨강) — 텍스트 대비 확보 */
+  --up-strong: #f0454e;     /* 구매 버튼(실앱 코럴 레드) */
+  --down: #2e6ff2;          /* 하락·판매(파랑) */
+  --flat: #6b7684;
+  --dark: #191f28;          /* 주요 진행 CTA(짙은 pill) */
+  --dark-press: #333d4b;
+
+  /* ── 3분류 태그(사실/해석/모름/관심) + 배지 ── */
+  --fact: #e7f7ef;  --fact-ink: #12a661;
+  --interp: #fff6e0; --interp-ink: #c77700;
+  --unk: #eef1f4;   --unk-ink: #6b7684;
+  --buzz: #f2ecfc;  --buzz-ink: #7c4dd4;
+  --warnbg: #fff3e9; --warn: #c2610a;
+  --badge: #eaf1fe; --badge-ink: #2e6ff2;  /* 출처·기준시각 배지(실앱 'AI분석' 배지 계승) */
+
+  /* ── 스케일(라운드·그림자) ── */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
+  --sh-1: 0 1px 2px rgba(25,31,40,.05), 0 1px 3px rgba(25,31,40,.04);
+  --sh-2: 0 4px 18px rgba(25,31,40,.06);
+  --sh-3: 0 12px 32px rgba(25,31,40,.14);
+  --sh-modal: 0 16px 48px rgba(25,31,40,.28);
 }
 
 * { box-sizing: border-box; }
@@ -26,56 +45,68 @@ html, body { margin: 0; padding: 0; }
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.6;
+  letter-spacing: -.01em;    /* 한글 가독 — 살짝 좁힘(핀테크 톤) */
   word-break: keep-all;
-  padding-bottom: 60px;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 72px;
+}
+
+/* 접근성 바닥: 키보드 포커스 가시화 · 모션 축소 존중 */
+.btn:focus-visible, .intent-btn:focus-visible, #progress .pg:focus-visible,
+.demo-scn:focus-visible, .side-toggle-btn:focus-visible, .btn.quiz:focus-visible {
+  outline: 2px solid var(--badge-ink); outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
 
 /* ── 상단 고정 바 3종 ──────────────────────────────────── */
 #mock-order-bar {
   position: sticky; top: 0; z-index: 60;
-  background: var(--dark); color: #fff;
-  font-size: 12px; font-weight: 800; letter-spacing: .08em;
-  text-align: center; padding: 7px 10px;
+  background: var(--ink); color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  text-align: center; padding: 8px 10px;
 }
 #top-bars { position: sticky; top: 0; z-index: 50; }
-#mock-order-bar:not([hidden]) + #top-bars { top: 32px; }
+#mock-order-bar:not([hidden]) + #top-bars { top: 34px; }
 #sim-badge {
   background: var(--badge); color: var(--badge-ink);
   font-size: 11.5px; font-weight: 700;
-  text-align: center; padding: 5px 10px;
+  text-align: center; padding: 6px 10px;
   border-bottom: 1px solid var(--line);
 }
 #safety-bar {
-  background: var(--fact); color: var(--fact-ink);
-  font-size: 11px; text-align: center; padding: 4px 8px;
+  background: #fff; color: var(--ink-2);
+  font-size: 11px; text-align: center; padding: 6px 8px;
   border-bottom: 1px solid var(--line);
 }
-#safety-bar b { font-weight: 800; }
+#safety-bar b { font-weight: 800; color: var(--ink); }
 
 /* ── 중앙 모바일 폭 카드(위저드 본체 + 안전모드 화면 공용 룩) ───────── */
 #phone, #safemode-screen {
-  max-width: 420px;
-  margin: 14px auto 30px;
+  max-width: 430px;
+  margin: 16px auto 40px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 14px 16px 18px;
-  box-shadow: 0 8px 28px rgba(0,0,0,.08);
+  border-radius: var(--r-xl);
+  padding: 18px 18px 22px;
+  box-shadow: var(--sh-2);
 }
 
-/* 진행 인디케이터 */
-#progress { display: flex; align-items: center; gap: 3px; margin-bottom: 10px; flex-wrap: wrap; }
+/* 진행 인디케이터(단계 스텝퍼) */
+#progress { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
 #progress .pg {
-  width: 30px; height: 30px; border-radius: 50%;
-  border: 1px solid var(--line); background: #f6f7f9; color: var(--sub);
-  font-size: 14px; cursor: pointer; padding: 0;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--line); background: #fff; color: var(--sub);
+  font-size: 13px; font-weight: 700; cursor: pointer; padding: 0;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 #progress .pg.on { background: var(--dark); border-color: var(--dark); color: #fff; }
-#progress .pg.done { border-color: var(--dark); color: var(--ink); }
-#progress-label { font-size: 11.5px; color: var(--sub); margin-left: 4px; }
+#progress .pg.done { border-color: var(--dark); color: var(--ink); background: #fff; }
+#progress-label { font-size: 11.5px; color: var(--sub); margin-left: 6px; font-weight: 600; }
 
 /* 단계 패널(위저드: 한 번에 한 화면) */
 .step-panel { display: none; }
@@ -83,11 +114,11 @@ body {
 .step-chip {
   display: none;
   font-size: 11px; font-weight: 800; color: #fff;
-  background: var(--dark); border-radius: 8px; padding: 2px 9px;
-  margin: 4px 0 8px;
+  background: var(--dark); border-radius: var(--r-pill); padding: 3px 11px;
+  margin: 4px 0 10px;
 }
 /* 전체 펼침 모드: 8단계 세로 나열 + 단계 라벨 칩 */
-body.expanded .step-panel { display: block; border-top: 2px dashed var(--line); padding-top: 10px; margin-top: 14px; }
+body.expanded .step-panel { display: block; border-top: 2px dashed var(--line); padding-top: 12px; margin-top: 16px; }
 body.expanded .step-chip { display: inline-block; }
 body.expanded #wizard-nav { display: none; }
 /* 안전모드(보기 방식 — 계약 §8): 위저드 전체(#phone — 신규 주문 유도 포함)를
@@ -97,46 +128,49 @@ body.expanded #wizard-nav { display: none; }
 body.safemode #phone { display: none !important; }
 body.safemode #safemode-screen { display: block; }
 
-h2 { font-size: 17px; margin: 6px 0 10px; }
-h3 { font-size: 15px; margin: 4px 0 8px; }
-.sub-note { font-size: 12px; color: var(--sub); margin: 0 0 10px; }
-.footnote { font-size: 11px; color: var(--sub); margin: 8px 0 0; }
+h2 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; margin: 8px 0 12px; line-height: 1.35; }
+h3 { font-size: 16px; font-weight: 700; margin: 4px 0 10px; }
+.sub-note { font-size: 12.5px; color: var(--sub); margin: 0 0 12px; line-height: 1.55; }
+.footnote { font-size: 11px; color: var(--sub); margin: 10px 0 0; line-height: 1.55; }
 .err-text { color: var(--up); font-size: 12px; font-weight: 700; }
 
 /* 카드 */
 .kcard {
-  background: #fff; border: 1px solid var(--line); border-radius: 12px;
-  padding: 10px 12px; margin: 8px 0;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: 14px 16px; margin: 10px 0;
+  box-shadow: var(--sh-1);
 }
-.kcard.notice { border-color: #f3c98b; }
-.kcard.warnish { border-color: #f3c98b; background: #fffdf7; }
-.kcard.quote { background: #f7f8fa; border-left: 4px solid var(--dark); }
-.kcard.state { background: #f6f7f9; color: var(--sub); }
+.kcard.notice { border-color: #ffe0b8; background: #fffdf9; }
+.kcard.warnish { border-color: #ffe0b8; background: #fffdf7; }
+.kcard.quote { background: var(--card-sub); border-left: 3px solid var(--dark); box-shadow: none; }
+.kcard.state { background: var(--card-sub); color: var(--ink-2); box-shadow: none; border-color: var(--line-2); }
 .tag {
-  display: inline-block; font-size: 10px; font-weight: 800;
-  border-radius: 5px; padding: 1px 7px; margin-bottom: 5px;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: -.01em;
+  border-radius: var(--r-pill); padding: 3px 10px; margin-bottom: 7px;
 }
+/* 3분류 시그니처: 색점으로 "사실/해석/모름"을 일관 신호화(게임화 아님) */
+.tag::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .85; }
 .tag.fact { background: var(--fact); color: var(--fact-ink); }
 .tag.interp { background: var(--interp); color: var(--interp-ink); }
 .tag.unk { background: var(--unk); color: var(--unk-ink); }
 .tag.buzz { background: var(--buzz); color: var(--buzz-ink); }
-.meta { font-size: 10px; color: var(--sub); margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
-.meta span { background: #f1f3f5; border-radius: 4px; padding: 0 6px; }
+.meta { font-size: 10px; color: var(--sub); margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.meta span { background: var(--badge); color: var(--badge-ink); border-radius: var(--r-pill); padding: 2px 8px; font-weight: 600; }
 .stance-pill {
   display: inline-block; font-size: 10px; font-weight: 700;
-  border-radius: 8px; padding: 0 7px; margin-right: 5px;
-  background: #f1f3f5; color: var(--flat);
+  border-radius: var(--r-pill); padding: 1px 9px; margin-right: 5px;
+  background: var(--line-2); color: var(--flat);
 }
 
 /* 가격 헤더(실앱 계승: 종목명·현재가·등락·SOR 정규장 라벨) */
-.price-head { padding: 4px 2px 8px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
-.price-head .nm { font-weight: 800; font-size: 15px; }
+.price-head { padding: 6px 2px 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.price-head .nm { font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
 .price-head .mk {
   font-size: 10px; font-weight: 700; color: var(--sub);
-  border: 1px solid var(--line); border-radius: 7px; padding: 0 6px; margin-left: 6px;
+  border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; margin-left: 6px;
 }
-.price-head .pr { font-size: 24px; font-weight: 800; margin-right: 8px; }
+.price-head .pr { font-size: 28px; font-weight: 800; letter-spacing: -.03em; margin: 4px 8px 0 0; display: inline-block; }
 
 /* 손익 4중 표기(색+부호+아이콘+텍스트) */
 .pnl { font-weight: 800; }
@@ -144,155 +178,171 @@ h3 { font-size: 15px; margin: 4px 0 8px; }
 .pnl.down { color: var(--down); }
 .pnl.flat { color: var(--flat); }
 
-/* 버튼 — 전부 텍스트 라벨, 취소=진행 동일 위계 */
+/* 버튼 — 전부 텍스트 라벨, 취소=진행 동일 위계, 둥근 pill(실앱 계승) */
 .btn {
   display: block; width: 100%;
-  border-radius: 11px; padding: 11px 10px;
-  font-size: 13px; font-weight: 800; cursor: pointer;
-  margin-top: 8px; font-family: inherit;
+  border-radius: var(--r-pill); padding: 14px 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  margin-top: 10px; font-family: inherit; letter-spacing: -.01em;
+  transition: transform .06s ease, background .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
+.btn:active { transform: translateY(1px); }
 .btn.dark { background: var(--dark); color: #fff; border: 1.5px solid var(--dark); }
-.btn.ghost { background: #fff; color: var(--ink); border: 1.5px solid #c9cfd6; }
-.btn.nav { background: #fff; color: var(--ink); border: 1.5px solid #c9cfd6; }
-.btn.quiz { display: inline-block; width: 48%; }
+.btn.dark:active { background: var(--dark-press); border-color: var(--dark-press); }
+.btn.ghost { background: #fff; color: var(--ink-2); border: 1.5px solid var(--line); }
+.btn.ghost:active { background: var(--card-sub); }
+.btn.nav { background: #fff; color: var(--ink); border: 1.5px solid var(--line); }
+.btn.nav:active { background: var(--card-sub); }
+.btn.quiz { display: inline-block; width: 48%; background: #fff; color: var(--ink); border: 1.5px solid var(--line); }
 .btn.quiz.sel { border-color: var(--badge-ink); background: var(--badge); color: var(--badge-ink); }
 /* 주문 실행 버튼(⑥에서만) — 구매=빨강 / 판매=파랑(실앱 동일) */
 .btn.exec { background: var(--flat); color: #fff; border: none; }
 .btn.exec.side-sell { background: var(--down); }
-.btn.exec.side-buy { background: var(--up); }
-.btn:disabled { opacity: .45; cursor: default; }
+.btn.exec.side-buy { background: var(--up-strong); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn:disabled:active { transform: none; }
 
-#wizard-nav { display: flex; gap: 8px; margin-top: 14px; }
+#wizard-nav { display: flex; gap: 8px; margin-top: 16px; }
 #wizard-nav .btn { margin-top: 0; }
 
 /* 검토 의향 4버튼 — 동일 크기·동일 색(기본 강조 없음) */
-.intent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.intent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
 .intent-btn {
-  border: 1.5px solid #c9cfd6; background: #fff; color: var(--ink);
-  border-radius: 10px; padding: 12px 6px; min-height: 52px;
+  border: 1.5px solid var(--line); background: #fff; color: var(--ink);
+  border-radius: var(--r-md); padding: 14px 8px; min-height: 56px;
   font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
 }
-.intent-btn.sel { border-width: 2.5px; border-color: var(--dark); }
+.intent-btn.sel { border-width: 2px; border-color: var(--dark); background: var(--card-sub); }
 
 /* 체크리스트 */
 .checkline {
-  display: flex; gap: 8px; align-items: flex-start;
-  padding: 7px 2px; border-bottom: 1px dashed var(--line); font-size: 12.5px;
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 9px 2px; border-bottom: 1px solid var(--line-2); font-size: 13px;
 }
 .checkline:last-child { border-bottom: none; }
-.checkline input[type="checkbox"] { margin-top: 3px; }
-.ox-row { display: flex; gap: 8px; }
-.q-text { font-size: 12.5px; margin: 4px 0 8px; }
+.checkline input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--dark); }
+.ox-row { display: flex; gap: 10px; }
+.q-text { font-size: 13px; margin: 6px 0 10px; line-height: 1.5; }
 
 /* ④ 비교표 — 모든 열 동일 크기·강조색 없음(대칭 원칙) */
 .calc-basis {
   background: var(--badge); color: var(--badge-ink);
-  font-size: 10.5px; border-radius: 8px; padding: 5px 9px; margin-bottom: 8px;
+  font-size: 10.5px; font-weight: 600; border-radius: var(--r-sm); padding: 6px 10px; margin-bottom: 10px;
 }
-.cmp-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.cmp-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); }
 table.cmp { border-collapse: collapse; width: 100%; font-size: 11.5px; table-layout: fixed; }
 table.cmp th, table.cmp td {
-  border-bottom: 1px solid var(--line); padding: 6px 6px;
+  border-bottom: 1px solid var(--line-2); padding: 8px 8px;
   text-align: right; vertical-align: top;
 }
-table.cmp th { background: #f4f6f8; font-size: 11px; font-weight: 700; text-align: right; }
+table.cmp th { background: var(--card-sub); font-size: 11px; font-weight: 700; text-align: right; color: var(--ink-2); }
 table.cmp th:first-child, table.cmp td:first-child { text-align: left; color: var(--sub); }
 table.cmp tr:last-child td { border-bottom: none; }
-.qty-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; }
-.qty-row input { width: 76px; padding: 6px 8px; border: 1.5px solid #c9cfd6; border-radius: 8px; font-size: 13px; font-family: inherit; }
+.qty-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin: 8px 0; }
+.qty-row input { width: 82px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: var(--r-sm); font-size: 14px; font-family: inherit; }
 .warn-note {
   background: var(--warnbg); color: var(--warn);
-  font-size: 11px; font-weight: 700; border-radius: 8px; padding: 4px 8px; margin-top: 6px;
+  font-size: 11px; font-weight: 700; border-radius: var(--r-sm); padding: 6px 10px; margin-top: 8px;
 }
 
 /* 입력 */
 textarea, input[type="text"], input[type="number"] {
-  width: 100%; border: 1.5px solid #c9cfd6; border-radius: 9px;
-  padding: 9px 10px; font-size: 13px; font-family: inherit; color: var(--ink);
-  background: #fff;
+  width: 100%; border: 1.5px solid var(--line); border-radius: var(--r-md);
+  padding: 11px 12px; font-size: 14px; font-family: inherit; color: var(--ink);
+  background: #fff; transition: border-color .15s ease;
 }
+textarea:focus, input[type="text"]:focus, input[type="number"]:focus { border-color: var(--badge-ink); outline: none; }
+textarea::placeholder, input::placeholder { color: var(--sub); }
 textarea { resize: vertical; }
-.confirm-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 600; margin: 12px 0 4px; cursor: pointer; line-height: 1.4; }
-.confirm-check input { margin-top: 2px; flex: none; }
+.confirm-check {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; font-weight: 600; margin: 14px 0 6px; cursor: pointer; line-height: 1.45; color: var(--ink);
+}
+.confirm-check input { margin-top: 2px; flex: none; width: 18px; height: 18px; accent-color: var(--dark); }
 
-/* ⑥ 주문 확인 모달(중앙) + 진입 모달 */
+/* ⑥ 주문 확인 모달(중앙) + 진입 모달 — 시각 일관성(D-0718-0548·D-0718-0210) */
 #sheet-backdrop, #intercept-backdrop {
   position: fixed; inset: 0; z-index: 80;
-  background: rgba(0,0,0,.45);
-  display: flex; justify-content: center;
+  background: rgba(25,31,40,.5);
+  display: flex; justify-content: center; align-items: center; padding: 18px;
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
-#sheet-backdrop, #intercept-backdrop { align-items: center; padding: 16px; } /* 주문 확인·진입 갈림길 = 중앙 모달(D-0718-0548·D-0718-0210) */
 /* hidden 속성이 어떤 display 규칙보다 우선하도록 강제 —
    ID 선택자의 display:flex가 UA의 [hidden]{display:none}을 이겨
-   바텀시트가 닫히지 않던 버그(T-0716-1510) 재발 방지 */
+   모달이 닫히지 않던 버그(T-0716-1510) 재발 방지 */
 [hidden] { display: none !important; }
 #order-sheet, #intercept-sheet {
-  width: 100%; max-width: 420px;
-  background: #fff; border-radius: 18px 18px 0 0;
-  padding: 16px 16px 22px;
-  box-shadow: 0 -8px 30px rgba(0,0,0,.25);
-}
-#order-sheet, #intercept-sheet {  /* 중앙 모달 룩 — 전체 모서리 둥글게·세로 넘침 대비(주문 확인 D-0718-0548·진입 D-0718-0210) */
-  border-radius: 18px;
-  box-shadow: 0 12px 40px rgba(0,0,0,.3);
-  max-height: calc(100vh - 32px); overflow-y: auto;
+  width: 100%; max-width: 430px;
+  background: #fff; border-radius: var(--r-xl);
+  padding: 22px 20px 24px;
+  box-shadow: var(--sh-modal);
+  max-height: calc(100vh - 36px); overflow-y: auto;
 }
 
 /* ④ 검토 방향 전환 세그먼트(D-0718-0255) — 동일 위계 2버튼, 현 방향은 테두리만 */
-.side-toggle { display: flex; gap: 8px; margin: 0 0 10px; }
+.side-toggle { display: flex; gap: 8px; margin: 0 0 12px; }
 .side-toggle-btn {
-  flex: 1; padding: 8px 0;
-  border: 1.5px solid var(--line); border-radius: 10px;
-  background: #fff; font-size: 13px; cursor: pointer;
+  flex: 1; padding: 10px 0;
+  border: 1.5px solid var(--line); border-radius: var(--r-md);
+  background: #fff; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; font-family: inherit;
 }
-.side-toggle-btn.on { border-color: #111; font-weight: 700; }
-.side-toggle-btn:disabled { opacity: .45; cursor: default; }
-.sheet-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.side-toggle-btn.on { border-color: var(--ink); font-weight: 800; }
+.side-toggle-btn:disabled { opacity: .4; cursor: default; }
+.sheet-row {
+  display: flex; justify-content: space-between; font-size: 13px;
+  padding: 8px 0; border-bottom: 1px dotted #d5dae0; color: var(--ink-2);
+}
+.sheet-row:last-child { border-bottom: none; }
+.sheet-row span:last-child, .sheet-row b { color: var(--ink); }
 .sheet-row b { font-weight: 800; }
-.notice-item { font-size: 12px; padding: 4px 0; }
-.notice-item .no { font-weight: 800; color: var(--warn); margin-right: 5px; }
+.notice-item { font-size: 12.5px; padding: 5px 0; color: var(--ink-2); }
+.notice-item .no { font-weight: 800; color: var(--warn); margin-right: 6px; }
 
 /* ⑧ 안전모드 */
 .alert-band {
   background: var(--warnbg); color: var(--warn);
   font-size: 11.5px; font-weight: 700;
-  border-radius: 8px; padding: 6px 10px; margin-bottom: 8px;
+  border-radius: var(--r-md); padding: 8px 12px; margin-bottom: 10px; line-height: 1.5;
 }
 
 /* DEMO 패널(우측 하단 접이식) */
 #demo-panel {
-  position: fixed; right: 14px; bottom: 14px; z-index: 90;
-  width: 230px; background: var(--card);
-  border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(0,0,0,.18);
+  position: fixed; right: 16px; bottom: 16px; z-index: 90;
+  width: 236px; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--sh-3);
   overflow: hidden;
 }
 #demo-panel.collapsed #demo-body { display: none; }
 #demo-panel.collapsed { width: auto; }
 #demo-toggle {
   width: 100%; border: none; background: var(--dark); color: #fff;
-  font-size: 12px; font-weight: 800; padding: 9px 14px; cursor: pointer;
-  font-family: inherit;
+  font-size: 12px; font-weight: 800; padding: 11px 16px; cursor: pointer;
+  font-family: inherit; letter-spacing: -.01em;
 }
-#demo-body { padding: 10px 12px 12px; }
-.demo-title { font-size: 12px; font-weight: 800; margin-bottom: 6px; }
-.demo-sec { font-size: 10.5px; font-weight: 700; color: var(--sub); margin: 8px 0 4px; }
-.demo-check { display: block; font-size: 12px; margin: 6px 0; }
+#demo-body { padding: 12px 14px 14px; }
+.demo-title { font-size: 12.5px; font-weight: 800; margin-bottom: 8px; }
+.demo-sec { font-size: 10.5px; font-weight: 700; color: var(--sub); margin: 10px 0 5px; letter-spacing: .02em; }
+.demo-check { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 7px 0; cursor: pointer; }
+.demo-check input { accent-color: var(--dark); }
 .demo-scn {
   display: block; width: 100%; text-align: left;
-  border: 1.5px solid #c9cfd6; background: #fff; color: var(--ink);
-  border-radius: 9px; padding: 7px 9px; font-size: 11.5px; font-weight: 700;
-  margin: 4px 0; cursor: pointer; font-family: inherit;
+  border: 1.5px solid var(--line); background: #fff; color: var(--ink);
+  border-radius: var(--r-md); padding: 9px 11px; font-size: 11.5px; font-weight: 700;
+  margin: 5px 0; cursor: pointer; font-family: inherit;
 }
-.demo-scn.on { border-color: var(--dark); background: #f2f4f6; }
-.demo-note { font-size: 11px; color: var(--sub); line-height: 1.55; margin: 2px 0 0; }
+.demo-scn.on { border-color: var(--dark); background: var(--card-sub); }
+.demo-note { font-size: 11px; color: var(--sub); line-height: 1.6; margin: 3px 0 0; }
 
 /* 실앱 주문 화면 재현(S0·⑧ — 계약 §9 재현 화면 규칙) */
 .btn.order-fake { color: #fff; border: none; }
-.btn.order-fake.side-buy { background: var(--up); }
+.btn.order-fake.side-buy { background: var(--up-strong); }
 .btn.order-fake.side-sell { background: var(--down); }
 
 @media (max-width: 460px) {
-  #phone { margin: 8px 8px 24px; }
-  #demo-panel { width: 200px; }
+  #phone, #safemode-screen { margin: 10px 8px 28px; padding: 16px 14px 20px; }
+  #demo-panel { width: 200px; right: 10px; bottom: 10px; }
+  .price-head .pr { font-size: 26px; }
 }
