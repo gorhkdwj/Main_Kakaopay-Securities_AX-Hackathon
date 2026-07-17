@@ -51,10 +51,12 @@
       <div class="sheet-row"><span>가격</span><span id="s0-price">—</span></div>
       <div class="sheet-row"><span>수량</span><span id="s0-qty">—</span></div>
     </div>
-    <button id="s0-order-buy" class="btn order-fake side-buy" type="button"
-      aria-label="구매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">구매하기</button>
-    <button id="s0-order-sell" class="btn order-fake side-sell" type="button"
-      aria-label="판매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">판매하기</button>
+    <div class="order-cta-row"><!-- 실앱 재현: 판매(파랑)·구매(빨강) 좌우 병렬(색 구분만·row-reverse로 판매 좌/구매 우) -->
+      <button id="s0-order-buy" class="btn order-fake side-buy" type="button"
+        aria-label="구매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">구매하기</button>
+      <button id="s0-order-sell" class="btn order-fake side-sell" type="button"
+        aria-label="판매하기 — 주문 실행 아님, 판단 레이어 진입 팝업이 열려요">판매하기</button>
+    </div>
     <p class="footnote">이 데모는 특정 방향을 권하지 않아요 · 모든 주문은 모의(가상)예요.</p>
 
     <!-- 인터셉트 팝업 — "주문 버튼을 누른 순간"의 재현(상시 제시·바로 주문은 1탭) -->
@@ -205,8 +207,10 @@
       <div class="sheet-row"><span>가격</span><span id="s8-price">—</span></div>
       <div class="sheet-row"><span>수량</span><span id="s8-qty">—</span></div>
     </div>
-    <button id="s8-order-buy" class="btn order-fake side-buy" type="button" disabled>구매하기</button>
-    <button id="s8-order-sell" class="btn order-fake side-sell" type="button" disabled>판매하기</button>
+    <div class="order-cta-row"><!-- 실앱 재현: 판매(파랑)·구매(빨강) 좌우 병렬·전부 disabled(종착) -->
+      <button id="s8-order-buy" class="btn order-fake side-buy" type="button" disabled>구매하기</button>
+      <button id="s8-order-sell" class="btn order-fake side-sell" type="button" disabled>판매하기</button>
+    </div>
     <p class="footnote">이 화면은 실제 앱의 주문 화면을 본뜬 재현이에요 — 이 데모에서 주문은 실행되지 않아요.</p>
   </section>
 

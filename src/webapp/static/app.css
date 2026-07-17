@@ -340,6 +340,10 @@ textarea { resize: vertical; }
 .btn.order-fake { color: #fff; border: none; }
 .btn.order-fake.side-buy { background: var(--up-strong); }
 .btn.order-fake.side-sell { background: var(--down); }
+/* 구매/판매 좌우 병렬(실앱 하단 CTA 재현) — row-reverse: DOM(buy,sell)→화면(판매 좌/구매 우).
+   동일 크기·색 구분만(side 강조 없음 — §14·D-0717-2121). */
+.order-cta-row { display: flex; flex-direction: row-reverse; gap: 10px; margin-top: 12px; }
+.order-cta-row .btn { margin-top: 0; flex: 1; width: auto; }
 
 @media (max-width: 460px) {
   #phone, #safemode-screen { margin: 10px 8px 28px; padding: 16px 14px 20px; }
