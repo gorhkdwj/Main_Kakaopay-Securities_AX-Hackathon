@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0715-redesign · 디자인 전면 개편 1차(S1~S3) + 07:20 중단 인수인계
+**요청** — 온보딩 프롬프트(디자인개편) 수행: 실앱 룩앤필 개편·브랜치 커밋푸시·07:20 중단 후 인수인계 문서화. 중간 사용자 피드백으로 기준 상향: "실앱 픽셀 단위 복제 최우선 + 전 화면 실앱급 재구축".
+**수행 작업** — wt/redesign 브랜치 생성. S1 `aeb2b5c`: app.css 토큰·타이포·컴포넌트 파운데이션 전면 리스타일(실앱 미감·색점 태그 시그니처·접근성 focus/reduced-motion). S2 `7329ac6`: S0·⑧ 하단 CTA 좌우 병렬(판매 좌 파랑/구매 우 빨강 — row-reverse, id·배선 불변). S3 `5d0ac41`: renderOrderReplica를 실앱 종목 상세 크롬(캡처27)으로 재현 — 네비 SVG 행·34px 가격·탭 스트립·거래량/시총([데모 고정])·change_pct 부호 추종 SVG 차트·기간 칩(전부 비기능 장식·aria-hidden). 캡처 26장 6그룹 병렬 분석→디자인 스펙 합성 워크플로 가동(결과 회수 경로는 인수인계 문서 §5-0). 인수인계 문서 작성·갱신(`docs/handoff/2026-07-18_디자인개편_진행인수인계.md`).
+**변경 파일** — src/webapp/static/app.css(전면)·index.html(order-cta-row 래퍼 2곳)·app.js(renderOrderReplica+replicaChartSvg — 렌더 마크업만), docs/handoff/진행인수인계(신규), Worklog(본 항목).
+**검증** — 매 단위: pytest 302 pass · 안전 게이트 통과 · 브라우저(9200) 렌더·콘솔 앱 오류 0 · 외부 요청 0(인라인 SVG·시스템 폰트만). 전체 펼침 9패널 렌더 확인. 미검증: S0~⑧ 인터랙티브 완주 재확인(S3 이후 1회 부분 확인만 — 다음 세션 시작 시 완주 권장).
+**판단 근거** — 헌법 §4 최소 단위·§6 QA 루프·§14 경계(게임화 없음·비기능 장식 aria-hidden)·s4-ui-spec §3 디자인 언어. id/로직/계약 불변 원칙 유지.
+**결과** — S0·⑧ 실앱 크롬 재현 완료(3커밋 푸시). 잔여: 전 화면 실앱급 재구축(⑥ 시트→②브리핑→① 순, 인수인계 §5-1)·워크플로 스펙 회수(§5-0). 07:20 규정 중단.
+
 ### W-0718-0548-main · ⑥ 모의 체결 재확인 완화 + 중앙 모달(데모 최종 수정)
 **요청** — ⑥ 확인 시트 관련 사용자 지적 2건: (1) 팝업 중앙 이동 (2) "수량 재입력"이 값 재계산이 안 됨 — 의도인지·왜 필요한지. 답변 후 "모의 체결에 과한 마찰 아닌가" 재질문 → 권장안(중간) 선택("권장으로 수정").
 **수행 작업** — 헌법 §5 순서: ① s4-ui-spec ⑥·Decisionlog(D-0718-0548) 선행 갱신 ② 코드: index.html(#order-sheet confirm-qty 입력 제거 → confirm-ack "비가역 확인" 체크 + btn-settle 기본 disabled·aria "바텀시트"→"주문 재확인"), app.css(#sheet-backdrop 중앙 정렬·#order-sheet 전 모서리 radius·.confirm-check), app.js(openSheet: confirm-ack 리셋·버튼 비활성 / doSettle: 체크 확인·confirmed_qty=preview.inputs.qty 자동 전달 / ack change 핸들러) ③ test_dom_constraints(confirm-qty→confirm-ack·disabled) ④ 런북 §4. settle.py·계약 §9 고지·게이트 분모 불변.
