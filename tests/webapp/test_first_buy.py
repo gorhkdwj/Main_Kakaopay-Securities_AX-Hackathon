@@ -27,13 +27,6 @@ def test_i02_first_buy_scenario_payload(client):
     assert data["hold"] is None
     assert data["past_records"] == []
 
-    # 질문 초안 3문(목표 기간·감수 손실·재검토 조건)
-    qs = data["briefing"]["next_questions"]
-    assert len(qs) == 3
-    assert any("목표 보유 기간" in q for q in qs)
-    assert any("감수할 수 있는 손실" in q for q in qs)
-    assert any("다시 검토" in q for q in qs)
-
     # 진입 맥락(discovery_context)
     dc = data["discovery_context"]
     assert dc["path"] == "탐색하기 > 기업가치로 탐색하기"
@@ -41,10 +34,19 @@ def test_i02_first_buy_scenario_payload(client):
     assert dc["criteria"] == "최근 3년 매출 20% 이상·4년 연속 성장"
     assert dc["entered_at"] == "2026-07-17 15:10 KST"
 
+    # 브리핑은 '브리핑 시작' 시점에 별도 요청(D-0718-0355)
+    b = client.get("/api/briefing/first_buy").json()["briefing"]
+    guard = client.get("/api/briefing/first_buy").json()["guard"]
+    # 질문 초안 3문(목표 기간·감수 손실·재검토 조건)
+    qs = b["next_questions"]
+    assert len(qs) == 3
+    assert any("목표 보유 기간" in q for q in qs)
+    assert any("감수할 수 있는 손실" in q for q in qs)
+    assert any("다시 검토" in q for q in qs)
     # 사실 카드 소스(다온소재 = 3xx — 실적·IR 일정·시세)
-    assert [f["source_id"] for f in data["briefing"]["facts"]] == \
+    assert [f["source_id"] for f in b["facts"]] == \
         ["DEMO-SRC-301", "DEMO-SRC-303", "DEMO-SRC-302"]
-    assert data["guard"]["record"]["blocked"] == []
+    assert guard["record"]["blocked"] == []
 
 
 def test_i02_diary_draft_facts_only(client):

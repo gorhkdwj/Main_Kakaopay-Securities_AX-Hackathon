@@ -42,26 +42,27 @@ def test_i06_missing_disclosures_card_omitted(make_variant_client):
     data = c.get("/api/scenario/loss8").json()
     assert data["ok"] is True
 
-    # 공시 사실 카드가 생성되지 않는다(시세 카드만 남음)
-    facts = data["briefing"]["facts"]
-    assert len(facts) == 1
-    assert facts[0]["source_id"] == "DEMO-SRC-102"
-
-    # 상태 표기: '확인된 공시 없음'(계약 §8) + unavailable 목록
+    # 상태 표기: '확인된 공시 없음'(계약 §8) + unavailable 목록 — scenario 응답(meta)
     assert data["meta"]["disclosures_state"] == "확인된 공시 없음"
     assert "disclosures" in data["meta"]["unavailable"]
 
-    # 대체값 생성 금지 — 원본 공시 문구가 응답 어디에도 없다
-    dumped = json.dumps(data, ensure_ascii=False)
+    # 브리핑은 별도 엔드포인트(D-0718-0355): 공시 카드 없이 시세 카드만
+    bdata = c.get("/api/briefing/loss8").json()
+    facts = bdata["briefing"]["facts"]
+    assert len(facts) == 1
+    assert facts[0]["source_id"] == "DEMO-SRC-102"
+
+    # 대체값 생성 금지 — 원본 공시 문구가 브리핑 어디에도 없다
+    dumped = json.dumps(bdata, ensure_ascii=False)
     assert "3분기 잠정 영업이익" not in dumped
     assert "DEMO-SRC-101" not in dumped
 
     # 생략은 차단이 아니다 — 카운터 0 유지
-    assert data["safety"]["no_source"] == 0
-    assert data["safety"]["asof_missing"] == 0
+    assert bdata["safety"]["no_source"] == 0
+    assert bdata["safety"]["asof_missing"] == 0
 
     # 해석의 basis도 비워진다(없는 출처를 지어내지 않음)
-    assert all(i["basis"] == [] for i in data["briefing"]["interpretations"])
+    assert all(i["basis"] == [] for i in bdata["briefing"]["interpretations"])
 
 
 def test_i06_disclosure_without_source_is_blocked_and_counted(make_variant_client):
@@ -71,23 +72,23 @@ def test_i06_disclosure_without_source_is_blocked_and_counted(make_variant_clien
         fx["disclosures"][0].pop("published_at")
 
     c = make_variant_client("loss8", mutate)
-    data = c.get("/api/scenario/loss8").json()
+    bdata = c.get("/api/briefing/loss8").json()  # 브리핑 별도 엔드포인트(D-0718-0355)
 
-    assert data["briefing"]["policy_result"] == "blocked_partial"
-    cats = {b["category"] for b in data["guard"]["record"]["blocked"]}
+    assert bdata["briefing"]["policy_result"] == "blocked_partial"
+    cats = {b["category"] for b in bdata["guard"]["record"]["blocked"]}
     assert cats == {"no_source", "asof_missing"}
 
     # 렌더 허용 사실은 IR 일정 공시(103)와 시세 카드(102) — 위반 블록만 차단(계약 §6)
-    facts = data["briefing"]["facts"]
+    facts = bdata["briefing"]["facts"]
     assert [f["source_id"] for f in facts] == ["DEMO-SRC-103", "DEMO-SRC-102"]
     # 차단된 공시 텍스트는 렌더 대상(briefing)에 없다
-    assert "3분기 잠정 영업이익" not in json.dumps(data["briefing"], ensure_ascii=False)
+    assert "3분기 잠정 영업이익" not in json.dumps(bdata["briefing"], ensure_ascii=False)
 
     # 세션 카운터 반영(계약 §10)
-    assert data["safety"]["no_source"] == 1
-    assert data["safety"]["asof_missing"] == 1
-    assert data["safety"]["forbidden"] == 0
-    assert data["safety"]["facts_rendered"] == 2
+    assert bdata["safety"]["no_source"] == 1
+    assert bdata["safety"]["asof_missing"] == 1
+    assert bdata["safety"]["forbidden"] == 0
+    assert bdata["safety"]["facts_rendered"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -100,17 +101,25 @@ def test_safety_counters_accumulate_per_session(client):
                 "no_source", "forbidden", "asof_missing"):
         assert zero[key] == 0, f"초기 카운터가 0이 아닙니다: {key}"
 
-    # loss8: 응답 1건 · 사실 3건 렌더(공시 2 + 시세 — D-0718-0107 확장) ·
-    # 정적 텍스트 1건(community_buzz.note)
+    # 시나리오 로드는 정적 텍스트(community_buzz)만 검사 — 브리핑 카운터는 아직 0
+    # (브리핑은 별도 엔드포인트에서 생성 — D-0718-0355)
     client.get("/api/scenario/loss8")
+    s0 = client.get("/api/safety").json()["safety"]
+    assert s0["responses_checked"] == 0
+    assert s0["facts_rendered"] == 0
+    assert s0["static_texts_checked"] == 1  # community_buzz.note
+
+    # 브리핑 생성: 응답 1건 · 사실 3건(공시 2 + 시세 — D-0718-0107 확장)
+    client.get("/api/briefing/loss8")
     s1 = client.get("/api/safety").json()["safety"]
     assert s1["responses_checked"] == 1
     assert s1["facts_rendered"] == 3
-    assert s1["static_texts_checked"] == 1
+    assert s1["static_texts_checked"] == 1  # 브리핑은 정적 텍스트 검사 안 함(불변)
     assert s1["no_source"] == 0 and s1["forbidden"] == 0 and s1["asof_missing"] == 0
 
-    # first_buy: +응답 1 · +사실 3 · +정적 2(buzz + 자동완성 초안)
+    # first_buy 로드: +정적 2(buzz + 자동완성 초안) / 브리핑: +응답 1 · +사실 3
     client.get("/api/scenario/first_buy")
+    client.get("/api/briefing/first_buy")
     s2 = client.get("/api/safety").json()["safety"]
     assert s2["responses_checked"] == 2
     assert s2["facts_rendered"] == 6
@@ -139,7 +148,7 @@ def test_rendered_briefing_texts_pass_lexicon(client):
 
     for sid in ("loss8", "profit15", "first_buy"):
         data = client.get(f"/api/scenario/{sid}").json()
-        b = data["briefing"]
+        b = client.get(f"/api/briefing/{sid}").json()["briefing"]  # 별도 엔드포인트
         blocks = [f["text"] for f in b["facts"]]
         blocks += [i["text"] for i in b["interpretations"]]
         blocks += list(b["unknowns"]) + list(b["next_questions"])

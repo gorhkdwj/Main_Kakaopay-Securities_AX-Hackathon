@@ -20,6 +20,7 @@ const S = {
   diaryText: "",
   settlement: null,
   savedRecord: null,
+  briefingLoading: false, // ② 브리핑 생성 중 여부(진입 지연 생성 — D-0718-0355)
 };
 
 const STEP_NAMES = ["주문 화면(진입)", "① 종목·계획", "② 관련 사실", "③ 체크리스트",
@@ -144,6 +145,7 @@ async function loadScenario(id) {
   S.diaryText = "";
   S.settlement = null;
   S.savedRecord = null;
+  S.briefingLoading = false;  // 브리핑은 '브리핑 시작' 시점에 별도 요청(D-0718-0355)
   el("diary-input").value = "";
   el("retro-input").value = "";
   el("sim-badge").textContent = S.data.meta.badge_text;
@@ -186,7 +188,9 @@ function goStep(n) {
   // 단계 이동 시 팝업은 항상 닫는다 — 발동은 S0 구매/판매 클릭만(D-0718-0210)
   closeIntercept();
   if (S.data) {
+    // ②는 진입 시점의 브리핑 상태(로딩/완성)를 반영해 재렌더(D-0718-0355),
     // ⑦·⑧은 ⑤ 일지·재검토 입력을 인용하므로 진입 시점 값으로 재렌더(스테일 방지)
+    if (S.step === 2) renderStep2();
     if (S.step === 7) renderStep7();
     if (S.step === 8) renderStep8();
   }
@@ -195,6 +199,27 @@ function goStep(n) {
 }
 function openIntercept() { el("intercept-backdrop").hidden = false; }
 function closeIntercept() { el("intercept-backdrop").hidden = true; }
+/* ② 브리핑을 '브리핑 시작' 시점에 요청한다(D-0718-0355) — ①을 읽는 동안
+   백그라운드로 생성되고, ② 진입 시 미완이면 renderStep2가 로딩을 표시한다.
+   live 모드에서 '바로 주문'을 택한 사용자는 이 요청 자체를 겪지 않는다. */
+async function requestBriefing() {
+  if (!S.data || S.data.briefing || S.briefingLoading) return;
+  S.briefingLoading = true;
+  if (S.step === 2) renderStep2();  // 이미 ②에 있으면 즉시 로딩 표시
+  const r = await api("/api/briefing/" + encodeURIComponent(S.scenarioId));
+  S.briefingLoading = false;
+  if (r.body && r.body.ok) {
+    S.data.briefing = r.body.briefing;
+    S.data.briefing_source = r.body.briefing_source;
+    S.data.guard = r.body.guard;
+    if (S.step === 2) renderStep2();
+  } else {
+    showAppError(
+      `브리핑을 준비하지 못했어요 — ${loadFailReason(r)} 다시 시도해 주세요.`,
+      () => requestBriefing());
+    if (S.step === 2) renderStep2();
+  }
+}
 /* S0 구매/판매 클릭 = 흐름 방향 결정 + 인터셉트 발동(양방향 — D-0718-0225) */
 function setFlowSide(next) {
   if (next === "sell" && holdingQty() === 0) {
@@ -399,6 +424,19 @@ const BRIEFING_SOURCE_LABELS = {
 function renderStep2() {
   const b = S.data.briefing;
   const m = S.data.meta;
+
+  // 브리핑은 '브리핑 시작' 시점에 별도 요청한다(D-0718-0355) — 아직 없으면
+  // 로딩 표시. requestBriefing 완료 시 renderStep2가 다시 불려 실제 내용이 채워진다.
+  if (!b) {
+    el("s2-src").innerHTML = "";
+    el("s2-facts").innerHTML = `<div class="kcard notice">${
+      S.briefingLoading
+        ? "브리핑을 준비하고 있어요… 잠시만 기다려 주세요."
+        : "‘판단 전 브리핑 시작하기’를 누르면 브리핑을 준비해요."}</div>`;
+    ["s2-interps", "s2-unknowns", "s2-questions", "s2-buzz"].forEach((id) =>
+      (el(id).innerHTML = ""));
+    return;
+  }
 
   const srcLabel = BRIEFING_SOURCE_LABELS[S.data.briefing_source] || "";
   el("s2-src").innerHTML = srcLabel
@@ -887,7 +925,10 @@ function toggleSafemode(onFlag) {
 
 /* ── 이벤트 배선 ──────────────────────────────────────── */
 function wireEvents() {
-  el("btn-start").addEventListener("click", () => goStep(1)); // goStep이 팝업을 닫는다
+  el("btn-start").addEventListener("click", () => {
+    requestBriefing();  // 비동기 시작 — ①(계획 회상)을 읽는 동안 백그라운드 생성
+    goStep(1);          // goStep이 팝업을 닫는다
+  });
   // 레이어는 투자 행동을 막지 않는다 — "바로 주문"은 팝업만 닫고 주문 화면(S0 재현)에 머묾(계약 §9)
   el("btn-skip-briefing").addEventListener("click", closeIntercept);
   // S0 배경 주문 버튼 = 흐름 방향 결정 + 인터셉트 발동(주문 실행 아님 — D-0718-0225)

@@ -26,10 +26,13 @@ def test_i01_scenario_list_defaults_to_loss8(client):
 
 
 def test_i01_loss8_full_api_sequence(client, records_dir):
-    # ── ①② 시나리오 로드: 정적 브리핑이 guard를 통과해 돌아온다 ──────
+    # ── ① 시나리오 로드: 브리핑 제외한 화면 데이터(D-0718-0355) ──────────
     data = client.get("/api/scenario/loss8").json()
     assert data["ok"] is True
-    b = data["briefing"]
+
+    # ── ② 브리핑은 별도 엔드포인트 — 정적 브리핑이 guard를 통과해 돌아온다 ──
+    bdata = client.get("/api/briefing/loss8").json()
+    b = bdata["briefing"]
 
     # facts = 실적 공시(101) + IR 일정 공시(103 — D-0718-0107 확장) + 시세·거래량(102)
     assert [f["source_id"] for f in b["facts"]] == \
@@ -52,8 +55,8 @@ def test_i01_loss8_full_api_sequence(client, records_dir):
 
     # guard: 차단 0·경고 0·information_only
     assert b["policy_result"] == "information_only"
-    assert data["guard"]["record"]["blocked"] == []
-    assert data["guard"]["record"]["warnings"] == []
+    assert bdata["guard"]["record"]["blocked"] == []
+    assert bdata["guard"]["record"]["warnings"] == []
     assert b["user_inputs"]["situation"] == "loss8"
 
     # 지난 투자 일지 리마인드(past_records — 사용자 글 인용용)
@@ -152,10 +155,11 @@ def test_i03_profit15_load_and_remind(client):
     assert len(data["past_records"]) == 1
     assert data["past_records"][0]["side"] == "buy"
     assert data["past_records"][0]["qty"] == 20
-    # 브리핑 사실 소스(한빛식품 = 2xx — 실적·IR 일정·시세)
-    assert [f["source_id"] for f in data["briefing"]["facts"]] == \
+    # 브리핑 사실 소스(한빛식품 = 2xx — 실적·IR 일정·시세) — 별도 엔드포인트(D-0718-0355)
+    bdata = client.get("/api/briefing/profit15").json()
+    assert [f["source_id"] for f in bdata["briefing"]["facts"]] == \
         ["DEMO-SRC-201", "DEMO-SRC-203", "DEMO-SRC-202"]
-    assert data["guard"]["record"]["blocked"] == []
+    assert bdata["guard"]["record"]["blocked"] == []
 
 
 def test_i03_profit15_preview_sign_and_settle(client):

@@ -29,13 +29,13 @@ def cache_client(records_dir, tmp_path) -> TestClient:
 
 def test_default_test_client_uses_static_path(client):
     # 기본 client는 콘텐츠 골든 단언용 static 경로다(conftest 계약 명시)
-    data = client.get("/api/scenario/loss8").json()
+    data = client.get("/api/briefing/loss8").json()
     assert data["briefing_source"] == "static"
 
 
 def test_original_scenarios_use_cache_source(cache_client):
     for sid in ("loss8", "profit15", "first_buy"):
-        data = cache_client.get(f"/api/scenario/{sid}").json()
+        data = cache_client.get(f"/api/briefing/{sid}").json()
         assert data["ok"] is True
         assert data["briefing_source"] == "cache", sid
         # 실LLM 캐시라도 렌더 계약은 동일: 사실 전건 출처·기준시각, 해석 양면
@@ -49,7 +49,7 @@ def test_variant_fixture_falls_back_to_static(make_variant_client):
     def mutate(fx):
         fx["price"]["close"] = 45500  # 내용 변경 → 캐시 지문 불일치(스테일)
     client = make_variant_client("loss8", mutate)
-    data = client.get("/api/scenario/loss8").json()
+    data = client.get("/api/briefing/loss8").json()
     assert data["ok"] is True
     assert data["briefing_source"] == "static"
 
@@ -63,7 +63,7 @@ def test_injected_disclosure_is_data_not_instruction(make_variant_client):
             "published_at": "2026-07-17 10:00 KST",
         })
     client = make_variant_client("loss8", mutate)
-    data = client.get("/api/scenario/loss8").json()
+    data = client.get("/api/briefing/loss8").json()
     assert data["ok"] is True
     # 변형 fixture → 정적 조립 경로(스테일 캐시 미사용)
     assert data["briefing_source"] == "static"
@@ -76,7 +76,7 @@ def test_injected_disclosure_is_data_not_instruction(make_variant_client):
 
 
 def test_briefing_resolution_written_to_audit_log(cache_client, tmp_path):
-    cache_client.get("/api/scenario/loss8")
+    cache_client.get("/api/briefing/loss8")
     audit_file = tmp_path / "audit" / "briefing_events.jsonl"
     assert audit_file.is_file()
     events = [json.loads(line) for line in

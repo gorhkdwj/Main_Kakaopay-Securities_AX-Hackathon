@@ -425,36 +425,15 @@ def create_app(fixtures_dir: "Path | str | None" = None,
         ]
         return {"ok": True, "scenarios": scenarios, "safety": safety_snapshot()}
 
-    @app.get("/api/scenario/{scenario_id}")
-    def api_scenario(scenario_id: str):
-        """fixture 로드 → 브리핑(폴백 사슬) → guard 통과 → 화면 데이터 반환.
+    def _build_briefing(fx: dict, scenario_id: str) -> dict:
+        """브리핑(폴백 사슬 → guard → 카운터·감사로그)을 생성한다(계약 §6·§8).
 
-        브리핑 원천(S5): generate_briefing이 live→cache를 시도하고, 실패하면
-        compose_briefing(정적 조립)으로 폴백한다. 원천은 briefing_source로
-        응답에 싣고(화면 배지 — 계약 §9), 결정 이력은 감사로그에 남긴다(§8).
-
-        출력: {ok, scenario_id, briefing(정화된 계약 §6 JSON),
-               briefing_source("live"|"cache"|"static"),
-               guard: {policy_result, record(차단 기록), static_blocked},
-               meta: {instrument, price, volume, holding, cash,
-                      portfolio_total_value, plan, trade_date, as_of,
-                      is_synthetic, side, market_label, badge_text,
-                      unavailable, disclosures_state},
-               hold(hold_summary 결과 | null), past_records, discovery_context,
-               community_buzz(정적 검사 통과분 | null),
-               diary_draft(first_buy 자동완성 초안 | null), safety}
+        시나리오 로드와 분리된 별도 단계다 — 사용자가 '브리핑 시작'을 택할 때만
+        호출되어 live 모드의 불필요한 생성·지연을 없앤다(D-0718-0355).
+        반환: {briefing(정화본), briefing_source, guard} — GET /api/briefing 응답용.
         """
-        try:
-            fx = load_fixture(scenario_id)
-        except FixtureInvalidError as exc:
-            return _fixture_invalid_response(exc)
-        if fx is None:
-            return _err(404, "not_found",
-                        f"시나리오 '{scenario_id}'를 찾을 수 없어요 — fixture 파일이 없어요.")
-
-        # 정적 조립은 항상 수행 — aux(누락 필드 상태)는 fixture의 사실이고,
-        # live·cache 실패 시의 최종 폴백 응답이기도 하다(계약 §8).
-        static_response, aux = compose_briefing(fx)
+        # 정적 조립은 항상 수행 — live·cache 실패 시의 최종 폴백(계약 §8).
+        static_response, _aux = compose_briefing(fx)
         llm_response, llm_source, attempts = generate_briefing(
             fx, mode=app.state.briefing_mode,
             price_source_id=PRICE_FACT_SOURCE.get(scenario_id),
@@ -476,6 +455,58 @@ def create_app(fixtures_dir: "Path | str | None" = None,
             known_source_ids=known_source_ids_for(fx, scenario_id),
         )
         accumulate_guard(sanitized, record)
+        return {
+            "briefing": sanitized,
+            "briefing_source": briefing_source,
+            "guard": {"policy_result": sanitized.get("policy_result"), "record": record},
+        }
+
+    @app.get("/api/briefing/{scenario_id}")
+    def api_briefing(scenario_id: str):
+        """②의 브리핑을 생성해 반환한다 — '브리핑 시작' 시점에만 호출(D-0718-0355).
+
+        출력: {ok, scenario_id, briefing(정화된 계약 §6 JSON),
+               briefing_source("live"|"cache"|"static"),
+               guard: {policy_result, record}, safety}
+        """
+        try:
+            fx = load_fixture(scenario_id)
+        except FixtureInvalidError as exc:
+            return _fixture_invalid_response(exc)
+        if fx is None:
+            return _err(404, "not_found",
+                        f"시나리오 '{scenario_id}'를 찾을 수 없어요 — fixture 파일이 없어요.")
+        result = _build_briefing(fx, scenario_id)
+        return {"ok": True, "scenario_id": scenario_id, **result,
+                "safety": safety_snapshot()}
+
+    @app.get("/api/scenario/{scenario_id}")
+    def api_scenario(scenario_id: str):
+        """fixture 로드 → 화면 데이터(브리핑 제외 — 별도 GET /api/briefing) 반환.
+
+        브리핑은 '브리핑 시작' 시점에 별도 요청한다(D-0718-0355) — 이 응답에는
+        meta·hold·past_records·community_buzz·diary_draft만 담긴다.
+
+        출력: {ok, scenario_id,
+               meta: {instrument, price, volume, holding, cash,
+                      portfolio_total_value, plan, trade_date, as_of,
+                      is_synthetic, side, market_label, badge_text,
+                      unavailable, disclosures_state},
+               static_blocked(community_buzz·diary_draft 차단 기록),
+               hold(hold_summary 결과 | null), past_records, discovery_context,
+               community_buzz(정적 검사 통과분 | null),
+               diary_draft(first_buy 자동완성 초안 | null), safety}
+        """
+        try:
+            fx = load_fixture(scenario_id)
+        except FixtureInvalidError as exc:
+            return _fixture_invalid_response(exc)
+        if fx is None:
+            return _err(404, "not_found",
+                        f"시나리오 '{scenario_id}'를 찾을 수 없어요 — fixture 파일이 없어요.")
+
+        # 누락 필드 상태(공시·시세 등) — 브리핑과 무관한 fixture 사실이므로 여기서 계산
+        _static_response, aux = compose_briefing(fx)
 
         static_blocked: list = []
 
@@ -533,13 +564,7 @@ def create_app(fixtures_dir: "Path | str | None" = None,
         return {
             "ok": True,
             "scenario_id": scenario_id,
-            "briefing": sanitized,
-            "briefing_source": briefing_source,
-            "guard": {
-                "policy_result": sanitized.get("policy_result"),
-                "record": record,
-                "static_blocked": static_blocked,
-            },
+            "static_blocked": static_blocked,  # community_buzz·diary_draft 차단 기록
             "meta": meta,
             "hold": hold,
             "past_records": fx.get("past_records") or [],

@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0414-main · 브리핑 생성 시점 분리 — 진입 지연 생성(D-0718-0355)
+**요청** — "브리핑이 진입 시점 생성인가 데모 시작 시 미리 생성인가? 진입 시점이 맞는 것 같다" → 진단 후 "live 모드로 시연할 거야. 수정하자".
+**수행 작업** — 진단: 현재 loadScenario(GET /api/scenario)가 브리핑을 미리 생성 → live 지연이 S0/전환마다 앞당겨짐. 수정: ① 계약 §9·스펙 §4 ② 선행(진입 지연 생성) ② app.py: _build_briefing 헬퍼 추출 + GET /api/briefing/{id} 신설 + /api/scenario에서 브리핑·guard·briefing_source 제거(meta·hold·past_records·buzz·diary_draft만) ③ app.js: btn-start → requestBriefing() 비동기 + goStep(1), renderStep2 로딩 방어, goStep(2)에 renderStep2 추가(진입 시 상태 반영 — 이 누락으로 로딩 미표시 결함 발견·수정) ④ 테스트 12건 이동(scenario briefing 단언 → /api/briefing, 카운터 집계 순서 재작성) ⑤ .env BRIEFING_MODE=cache→live 전환.
+**변경 파일** — docs/requirements-contract.md(§9), docs/plans/s4-ui-spec.md(§4 ②), src/webapp/app.py, src/webapp/static/app.js, tests/webapp/{test_briefing_sources,test_first_buy,test_integration_flows,test_safety_and_states}.py, Decisionlog.md(D-0718-0355-main), .env(Git 제외)
+**검증** — pytest 302건 전체 통과. **live 모드 실브라우저 검증**: 구매 진입→팝업 110ms(즉시·브리핑 대기 없음), 브리핑 시작→① 즉시(백그라운드 요청), ② 진입 시 "브리핑을 준비하고 있어요" 로딩→백그라운드 완성→"AI 생성(실시간)" 배지·실LLM 사실 4카드, "브리핑 없이 바로 주문"은 브리핑 요청·로딩 모두 없음(briefingRequested false), 콘솔 오류 0. 게이트 통과(gate_20260718_0414).
+**판단 근거** — D-0718-0355-main(브리핑은 요청 시 생성·지연을 브리핑 볼 사람에 국한·바로주문 비용 제거).
+**결과** — 완료. 시연 기본 모드 live 확정(.env). 미검증: 시연 당일 현장 네트워크 지연 실측 — 필요 시 cache 폴백(BRIEFING_MODE=cache). 다음: S7.
+
 ### W-0718-0349-main · 매수 후 비중 총자산 기준 전환 — 기존 보유 누락 오류 수정(D-0718-0335)
 **요청** — "가온전자 판매 시 보유 30주인데 구매 시 보유 0처럼 계산됨. 다른 시나리오도 확인 바람" → 실측 진단 보고 후 "수정해줘".
 **수행 작업** — 진단(엔진 실측): "구매 후 비중"이 이번 매수분 ÷ 예수금이라 loss8·profit15에서 기존 보유 누락(셋 다 46.0%·잘못된 집중도 경고), first_buy만 우연히 정확. 수정: ① 계약 §4 매수 후 비중 정의 변경(분자=매수 후 종목 총 평가액[기존 보유+이번 매수], 분모=portfolio_total_value 총자산 — 매도 잔여 비중과 동일 대칭)·§13 대장 해소 ② calculator.py buy_preview·_compute_buy에 portfolio_total_value 인자(None이면 cash 폴백)·비중 재계산 ③ app.py에 fx.portfolio_total_value 전달 ④ 테스트 정정·신규.
