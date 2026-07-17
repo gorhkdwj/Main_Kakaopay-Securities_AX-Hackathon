@@ -15,6 +15,14 @@
 
 ---
 
+### W-0717-2337-main · .env 템플릿 생성(.env.example + 로컬 .env 복사)
+**요청** — "일단 env 파일 템플릿만 만들어줘".
+**수행 작업** — `.env.example` 생성(ANTHROPIC_API_KEY 빈 값 + 선택 변수 ANTHROPIC_MODEL·BRIEFING_MODE 주석 + 헌법 §7 경고) 후 로컬 `.env`로 복사. `.gitignore`는 기존 패턴(`.env` 제외·`!.env.example` 추적) 그대로 사용. README 라이브 모드 절을 템플릿 복사 방식으로 갱신.
+**변경 파일** — .env.example(신규·추적), .env(신규·Git 제외), README.md, Worklog.md
+**검증** — `git check-ignore .env` 통과(추적 안 됨 확인). 빈 키 상태 동작 확인: generate_briefing(auto) → `live_skipped(no_api_key)` → `cache_hit` (키를 채우기 전에는 네트워크 미시도).
+**판단 근거** — 키 원문이 채팅·Git에 닿지 않는 입력 경로 확보(헌법 §7).
+**결과** — 완료. 사용자가 `.env`의 `ANTHROPIC_API_KEY=` 뒤에 키만 채우면 라이브 모드 준비 끝. 이후: 실호출 검증 → 캐시 실생성 → 게이트 재실행.
+
 ### W-0717-2323-main · LLM 공급자 Claude API 교체(사용자 지시 — D-0717-2323-main)
 **요청** — "claude api로 변경할것임" (Anthropic 크레딧 결제 진행에 따른 공급자 확정).
 **수행 작업** — `call_openai` → `call_anthropic`(Messages API httpx REST 직행 — SDK 무추가, system 메시지는 top-level 파라미터), 키 `ANTHROPIC_API_KEY`·모델 `ANTHROPIC_MODEL`(기본 claude-sonnet-5), 캐시 생성 스크립트 generated_by "anthropic:모델"·배치 타임아웃 60초, 테스트 env 격리 키 명칭 교체, README AI 브리핑 절(키 발급처 console.anthropic.com), requirements.txt에서 openai 제거(락파일·venv의 openai==2.45.0은 잔존 — 미사용, 락-venv 정합 우선).
