@@ -237,6 +237,16 @@ textarea { resize: vertical; }
   box-shadow: 0 12px 40px rgba(0,0,0,.3);
   max-height: calc(100vh - 32px); overflow-y: auto;
 }
+
+/* ④ 검토 방향 전환 세그먼트(D-0718-0255) — 동일 위계 2버튼, 현 방향은 테두리만 */
+.side-toggle { display: flex; gap: 8px; margin: 0 0 10px; }
+.side-toggle-btn {
+  flex: 1; padding: 8px 0;
+  border: 1.5px solid var(--line); border-radius: 10px;
+  background: #fff; font-size: 13px; cursor: pointer;
+}
+.side-toggle-btn.on { border-color: #111; font-weight: 700; }
+.side-toggle-btn:disabled { opacity: .45; cursor: default; }
 .sheet-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
 .sheet-row b { font-weight: 800; }
 .notice-item { font-size: 12px; padding: 4px 0; }

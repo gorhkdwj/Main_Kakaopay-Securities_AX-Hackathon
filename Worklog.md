@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0252-main · ④ 구매 수량 조정 + 검토 방향 전환 세그먼트(D-0718-0255)
+**요청** — 사용자 지적 2건: ① ④ 구매 비교에 수량 조정 미구현(8/10주 고정 — first_buy 골든 고정 비교의 이식 잔재) ② 구매로 진입해도 ② 브리핑 후 판매로 마음을 바꿀 수 있어야 — 방향 선택·변경이 ④에서도 자유로워야.
+**수행 작업** — 계약 §3.3(intent 동적 수량 라벨 `N주 구매 검토` 허용)·§9(④ 수량 조정·방향 전환 세그먼트 규정) 선행 갱신 후: ① 서버 `is_valid_intent`(고정 집합 + `^\d{1,3}주 구매 검토$` 패턴) ② app.js — S.buyQty(기본 10)·구매 수량 입력(판매의 '일부 판매 수량'과 대칭·예수금 초과 시 §5.3 오류 표시)·비교 열/⑤ 의향 라벨 동적 동기화(이전 수량 라벨 선택 시 새 라벨로 갱신, 체결 스냅샷 불변)·④ 상단 side-toggle 세그먼트("판매 검토"/"구매 검토" — 동일 위계, 전환 시 공통 리셋 applyFlowSideChange 재사용, 보유 0이면 판매 비활성+사실 안내) ③ DOM·record 테스트 신규 2건.
+**변경 파일** — docs/requirements-contract.md(§3.3·§9), docs/plans/{s4-ui-spec(④),validation-plan(I-01)}.md, src/webapp/app.py, src/webapp/static/{app.js,index.html,app.css}, tests/webapp/{test_dom_constraints,test_records_and_errors}.py, Decisionlog.md(D-0718-0255-main)
+**검증** — pytest 292건 전체 통과. playwright: 판매 진입→④ 토글(판매 on)→구매 전환→기본 10주(460,069)→12주 조정(552,000·집중도 경고·⑤ "12주 구매 검토" 동적 라벨)→⑥ 12주 체결→⑦ 기록 저장(동적 intent 서버 수용)→④ 복귀 25주 입력 시 예수금 초과 오류 표시("총 결제예정액 1,150,172원이…초과"), first_buy ④ 판매 토글 disabled+안내. 게이트 통과(gate_20260718_0252). 콘솔 JS 오류 0 — 예수금 초과 시 브라우저의 400 리소스 로그 1건은 §5.3 오류 계약의 정상 경로(판매 수량 초과와 동일 기존 동작).
+**판단 근거** — D-0718-0255-main(브리핑이 판단을 바꿀 수 있다는 서사를 UI가 실지원·최대 수량 열은 유도 오해 소지로 기각).
+**결과** — 완료. fixture 무변경(캐시 재생성 불요). 다음: S7.
+
 ### W-0718-0238-main · 완전 양방향 흐름 구현 완료(D-0718-0225 — 계획 대비 조기 완료)
 **요청** — "완전 양방향 흐름으로 진행하자. 계획을 세워봐."(플랜 모드 승인 후 실행).
 **수행 작업** — 4커밋: ① B0 문서 선행(계약 §3.1 cash 전 시나리오 1,000,000·ptv 현금 포함 재구성 해석·§4 K2 주석·§9 방향별 4버튼/고지 방향화·§10·§12, 스펙 ④⑤⑥, validation I-01, D-0718-0225) ② B1 fixture 2종 cash 변경 + 테스트 정합(fixture_alignment·records_and_errors qty 22 치환) + loss8 구매 흐름 통합 테스트 신규 ③ B2 캐시 2종 실LLM 재생성(지문 갱신) ④ B3 app.js flowSide: S 상태 신설·loadScenario 초기화(meta.side 기본)·setFlowSide(같은 방향 no-op·전환 시 intent/settlement/settledIntent/savedRecord 리셋→renderAll→팝업·보유 0 판매 클릭은 사실 안내 #itc-side-note)·side 파생 7지점 치환·미리보기 4슬롯 선취득·S0 팝업 카드 보유 유무 기준+예수금 병기·DOM 배선 단언 갱신. 서버·엔진·가드 무변경(설계 검증 확인).

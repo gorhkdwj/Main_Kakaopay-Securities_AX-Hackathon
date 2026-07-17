@@ -195,3 +195,22 @@ def test_broken_fixture_returns_graceful_error(tmp_path, records_dir):
     assert r3.status_code == 500
     assert r3.json()["error"]["code"] == "fixture_invalid"
     assert not records_dir.exists()  # 오류 시 기록 미생성(§5.3)
+
+
+def test_record_accepts_dynamic_buy_qty_intent(client):
+    """구매 수량 의향 동적 라벨(계약 §3.3 — 'N주 구매 검토', D-0718-0255)."""
+    ok = client.post("/api/record", json={
+        "scenario_id": "loss8",
+        "intent": "15주 구매 검토",
+        "reason_text": "저가 매수 검토 — 예수금 범위 안 수량으로 조정함",
+    })
+    assert ok.status_code == 200
+    assert ok.json()["record"]["intent"] == "15주 구매 검토"
+
+    # 형식 밖 라벨은 여전히 거부(고정 집합·패턴 모두 불일치)
+    bad = client.post("/api/record", json={
+        "scenario_id": "loss8",
+        "intent": "1000주 구매 검토",  # \d{1,3} 초과
+        "reason_text": "x",
+    })
+    assert bad.status_code == 400

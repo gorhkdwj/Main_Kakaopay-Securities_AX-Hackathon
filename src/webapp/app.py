@@ -34,6 +34,7 @@ from __future__ import annotations
 import datetime
 import itertools
 import json
+import re
 from pathlib import Path
 
 from fastapi import Body, FastAPI
@@ -122,18 +123,30 @@ SCENARIO_EXTRA_QUESTIONS = {
     ],
 }
 
-#: 검토 의향 4택(계약 §3.3 intent — 화면 4버튼과 동일 라벨, [데모 고정])
+#: 검토 의향(계약 §3.3·§9 — 방향별 4버튼과 동일 라벨, [데모 고정])
 VALID_INTENTS = {
-    # 매도 시나리오(loss8·profit15)
+    # 판매 검토 방향
     "그대로 유지",
     "일부 판매 검토",
     "전량 판매 검토",
     "나중에 재검토",
-    # 첫 구매 시나리오(first_buy)
+    # 구매 검토 방향
     "구매하지 않기",
     "8주 구매 검토",
     "10주 구매 검토",
 }
+
+#: 구매 수량 의향 동적 라벨(계약 §3.3 — ④ 구매 수량 조정, D-0718-0255):
+#: "N주 구매 검토"(N=1~999). 수량 유효성(예수금 한도)은 엔진이 계산 시점에
+#: 검증하며, 기록은 의향 표현이므로 라벨 형식만 검사한다.
+BUY_QTY_INTENT_RE = re.compile(r"^\d{1,3}주 구매 검토$")
+
+
+def is_valid_intent(intent) -> bool:
+    """검토 의향 라벨 검증 — 고정 집합 또는 구매 수량 동적 라벨."""
+    return isinstance(intent, str) and (
+        intent in VALID_INTENTS or bool(BUY_QTY_INTENT_RE.match(intent))
+    )
 
 #: /api/record가 파일에 쓰는 필드 전체(계약 §3.3) — 이 밖의 키는 절대 저장하지
 #: 않는다(결과 수익률 저장 금지 — 과정 중심 원칙).
@@ -662,7 +675,7 @@ def create_app(fixtures_dir: "Path | str | None" = None,
         if fixture_missing:
             return _err(404, "not_found",
                         f"시나리오 '{scenario_id}'를 찾을 수 없어요 — fixture 파일이 없어요.")
-        if not isinstance(intent, str) or intent not in VALID_INTENTS:
+        if not is_valid_intent(intent):
             return _err(400, "invalid_intent",
                         "검토 의향은 화면의 4가지 버튼 값 중 하나여야 해요.",
                         safety_snapshot())

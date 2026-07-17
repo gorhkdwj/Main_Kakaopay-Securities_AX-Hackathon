@@ -13,6 +13,7 @@ const S = {
   flowSide: null,      // 흐름 방향("sell"|"buy") — S0 진입 클릭이 결정(양방향, D-0718-0225).
                        // 기본값은 서버 meta.side(보유 기반). ③④⑤⑥이 이 값을 따른다.
   partialQty: 10,      // ④ 일부 판매 수량(기본 10주)
+  buyQty: 10,          // ④ 구매 수량(기본 10주 — D-0718-0255 수량 조정)
   previews: {},        // key(partial|full|b8|b10) → {preview}|{error}
   intent: null,        // ⑤ 검토 의향(4택 라벨)
   settledIntent: null, // 체결 시점 의향 스냅샷 — ⑦ "선택:" 표기 고정(이후 의향 변경과 분리)
@@ -24,10 +25,13 @@ const S = {
 const STEP_NAMES = ["주문 화면(진입)", "① 종목·계획", "② 관련 사실", "③ 체크리스트",
   "④ 시나리오 비교", "⑤ 검토 의향", "⑥ 모의 주문", "⑦ 회고", "⑧ 주문 화면(재현)"];
 
-const INTENTS = {
-  sell: ["그대로 유지", "일부 판매 검토", "전량 판매 검토", "나중에 재검토"],
-  buy: ["구매하지 않기", "8주 구매 검토", "10주 구매 검토", "나중에 재검토"],
-};
+/* 검토 의향 4버튼 라벨(계약 §9 — 방향별 세트). 구매 3번째는 ④ 수량 입력을
+   반영한 동적 라벨("N주 구매 검토" — 서버가 패턴으로 검증, D-0718-0255). */
+function intentLabels(side) {
+  return side === "sell"
+    ? ["그대로 유지", "일부 판매 검토", "전량 판매 검토", "나중에 재검토"]
+    : ["구매하지 않기", "8주 구매 검토", `${S.buyQty}주 구매 검토`, "나중에 재검토"];
+}
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -126,6 +130,7 @@ async function loadScenario(id) {
   // 이후 S0의 구매/판매 클릭(setFlowSide)이 이 값을 전환한다.
   S.flowSide = r.body.meta.side;
   S.partialQty = 10;
+  S.buyQty = 10;
   S.previews = {};
   S.intent = null;
   S.settledIntent = null;
@@ -155,7 +160,7 @@ async function fetchScenarioPreviews() {
   }
   if ((S.data.meta.cash || 0) > 0) {
     jobs.push(fetchPreview("b8", "buy", 8));
-    jobs.push(fetchPreview("b10", "buy", 10));
+    jobs.push(fetchPreview("b10", "buy", S.buyQty));
   }
   await Promise.all(jobs);
 }
@@ -199,14 +204,23 @@ function setFlowSide(next) {
     openIntercept();
     return;
   }
+  applyFlowSideChange(next); // 팝업 내용까지 새 방향 기준으로 재렌더한 뒤
+  openIntercept();           // 연다(순서 고정 — 내용 정합)
+}
+/* 방향 전환 공통 규칙 — 새 검토의 시작: 이전 방향의 의향·체결·기록 표시 초기화 */
+function applyFlowSideChange(next) {
   S.flowSide = next;
-  // 방향 전환 = 새 검토의 시작 — 이전 방향의 의향·체결·기록 표시를 초기화
   S.intent = null;
   S.settledIntent = null;
   S.settlement = null;
   S.savedRecord = null;
-  renderAll();       // 팝업 내용까지 새 방향 기준으로 재렌더한 뒤
-  openIntercept();   // 연다(순서 고정 — 내용 정합)
+  renderAll();
+}
+/* ④ 검토 방향 전환 세그먼트(D-0718-0255) — 브리핑 후 방향 변경 지원(팝업 없음) */
+function switchFlowSide(next) {
+  if (S.flowSide === next) return;
+  if (next === "sell" && holdingQty() === 0) return; // 보유 0 — 버튼도 disabled
+  applyFlowSideChange(next);
 }
 function renderChrome() {
   document.querySelectorAll(".step-panel").forEach((p) => {
@@ -465,9 +479,21 @@ function renderStep3() {
 }
 
 /* ④ 대칭 시나리오 비교(엔진 결과 표시 — 모든 열 동일 크기·강조색 없음) */
+function renderSideToggle() {
+  const canSell = holdingQty() > 0;
+  el("s4-side-toggle").innerHTML = `<div class="side-toggle" role="group" aria-label="검토 방향 전환">
+    <button type="button" class="side-toggle-btn${S.flowSide === "sell" ? " on" : ""}"
+      data-side="sell" ${canSell ? "" : "disabled"}>판매 검토</button>
+    <button type="button" class="side-toggle-btn${S.flowSide === "buy" ? " on" : ""}"
+      data-side="buy">구매 검토</button>
+  </div>${canSell ? "" : `<p class="sub-note">판매할 보유 수량이 없어 구매 검토만 할 수 있어요.</p>`}`;
+  el("s4-side-toggle").querySelectorAll("button").forEach((btn) =>
+    btn.addEventListener("click", () => switchFlowSide(btn.dataset.side)));
+}
 function renderStep4() {
   const m = S.data.meta;
   const side = S.flowSide;
+  renderSideToggle();
   el("s4-basis").textContent =
     `가상 기준시각 ${m.as_of} · 지정가 ${num(m.price.close)}원 · 수수료 0.015%` +
     (side === "sell" ? " · 세금 0.20%" : " · 구매는 세금 없음");
@@ -505,14 +531,21 @@ function renderStep4() {
       <tr><td>출금 가능일</td><td>—</td><td>${pv ? dateLabel(pv.settlement_date) : "—"}</td><td>${fv ? dateLabel(fv.settlement_date) : "—"}</td></tr>
     </table></div>`;
   } else {
-    el("s4-qty").innerHTML = "";
+    // 구매 수량 조정(D-0718-0255) — 판매의 '일부 판매 수량'과 대칭
+    el("s4-qty").innerHTML = `<div class="qty-row">
+      <label for="buy-qty">구매 수량</label>
+      <input id="buy-qty" type="number" inputmode="numeric" value="${S.buyQty}" aria-label="구매 수량 입력">
+      <span>주 (기본 10주)</span></div>
+      <p id="buy-error" class="err-text" hidden></p>`;
+    el("buy-qty").addEventListener("change", onBuyQtyChange);
     const a = S.previews.b8 || {};
     const b = S.previews.b10 || {};
     const av = a.preview, bv = b.preview;
+    if (b.error) { el("buy-error").hidden = false; el("buy-error").textContent = b.error; }
     const warnBadge = (v) => (v && v.concentration_warning
       ? ` <span class="warn-note" style="display:inline;padding:1px 6px">집중도 경고</span>` : "");
     el("s4-table").innerHTML = `<div class="cmp-wrap"><table class="cmp">
-      <tr><th>항목</th><th>8주 구매</th><th>10주 구매</th></tr>
+      <tr><th>항목</th><th>8주 구매</th><th>${bv ? num(bv.inputs.qty) : esc(String(S.buyQty))}주 구매</th></tr>
       <tr><td>구매대금</td><td>${av ? won(av.gross_amount) : esc(a.error || "—")}</td><td>${bv ? won(bv.gross_amount) : esc(b.error || "—")}</td></tr>
       <tr><td>수수료</td><td>${av ? won(av.fee) : "—"}</td><td>${bv ? won(bv.fee) : "—"}</td></tr>
       <tr><td>총 결제예정액</td><td>${av ? "<b>" + won(av.total_cost) + "</b>" : "—"}</td><td>${bv ? "<b>" + won(bv.total_cost) + "</b>" : "—"}</td></tr>
@@ -534,11 +567,24 @@ async function onPartialQtyChange(ev) {
   renderStep4();
   renderStep6();
 }
+async function onBuyQtyChange(ev) {
+  const raw = ev.target.value;
+  const n = Number(raw);
+  const prevLabel = `${S.buyQty}주 구매 검토`;
+  S.buyQty = Number.isInteger(n) ? n : raw; // 검증은 서버(엔진)가 한다 — §5.3 메시지 표시
+  await fetchPreview("b10", "buy", S.buyQty);
+  // 이전 수량 라벨의 구매 의향을 선택해 둔 상태면 새 수량 라벨로 갱신(계약 §9 —
+  // 체결 스냅샷 settledIntent는 불변)
+  if (S.intent === prevLabel) S.intent = `${S.buyQty}주 구매 검토`;
+  renderStep4();
+  renderStep5();
+  renderStep6();
+}
 
 /* ⑤ 검토 의향 4버튼 + 투자 일지 */
 function renderStep5() {
   const side = S.flowSide;
-  const labels = INTENTS[side];
+  const labels = intentLabels(side);
   document.querySelectorAll(".intent-btn").forEach((btn, i) => {
     btn.textContent = labels[i];
     btn.dataset.intent = labels[i];
@@ -558,7 +604,7 @@ function orderPlanFromIntent() {
     if (S.intent === "전량 판매 검토") return { key: "full", side };
   } else {
     if (S.intent === "8주 구매 검토") return { key: "b8", side };
-    if (S.intent === "10주 구매 검토") return { key: "b10", side };
+    if (S.intent === `${S.buyQty}주 구매 검토`) return { key: "b10", side };
   }
   return null;
 }

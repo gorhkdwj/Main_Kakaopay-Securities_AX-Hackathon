@@ -245,3 +245,21 @@ def test_step0_order_replica_with_intercept():
                       'el("s0-order-buy").hidden', 'el("s0-order-sell").hidden'):
         assert forbidden not in js, f"side 강조/hidden 로직 잔존: {forbidden}"
     assert "order-tab" not in html, "구매/판매 탭 잔존 — 버튼과 중복(사용자 지적 2026-07-17)"
+
+def test_step4_side_toggle_and_buy_qty():
+    """④ 검토 방향 전환 세그먼트 + 구매 수량 조정(D-0718-0255).
+
+    브리핑(②) 이후에도 방향 변경이 가능해야 한다(사용자 결정 2026-07-18).
+    세그먼트는 동일 위계 2버튼(측면 강조는 현 방향 표시 테두리만)이고,
+    구매 수량은 판매의 '일부 판매 수량'과 대칭인 입력으로 조정한다.
+    """
+    html = read_static("index.html")
+    js = read_static("app.js")
+    assert 'id="s4-side-toggle"' in html
+    assert "function switchFlowSide" in js
+    assert "function renderSideToggle" in js
+    # 구매 수량 입력 + 서버 검증 위임(§5.3) + 의향 라벨 동기화
+    assert 'id="buy-qty"' in js and "onBuyQtyChange" in js
+    assert "주 구매 검토" in js  # 동적 의향 라벨(intentLabels)
+    # 방향 전환은 공통 리셋 규칙(applyFlowSideChange)을 지난다
+    assert js.count("applyFlowSideChange(next)") >= 2
