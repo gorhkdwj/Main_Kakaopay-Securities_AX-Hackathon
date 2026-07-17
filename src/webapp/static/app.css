@@ -270,13 +270,7 @@ textarea { resize: vertical; }
 .demo-scn.on { border-color: var(--dark); background: #f2f4f6; }
 .demo-note { font-size: 11px; color: var(--sub); line-height: 1.55; margin: 2px 0 0; }
 
-/* ⑧ 실앱 주문 화면 재현(비기능 — 계약 §9 재현 화면 규칙) */
-.order-tabs { display: flex; gap: 8px; margin: 8px 0; }
-.order-tab {
-  flex: 1; padding: 9px 0; border-radius: 10px; border: 1.5px solid var(--line);
-  background: #f6f7f9; color: var(--sub); font-size: 13px; font-weight: 800;
-  font-family: inherit;
-}
+/* 실앱 주문 화면 재현(S0·⑧ — 계약 §9 재현 화면 규칙) */
 .btn.order-fake { color: #fff; border: none; }
 .btn.order-fake.side-buy { background: var(--up); }
 .btn.order-fake.side-sell { background: var(--down); }

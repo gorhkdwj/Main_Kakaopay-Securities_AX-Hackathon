@@ -184,8 +184,8 @@ def test_step8_replica_is_non_functional():
     assert "실앱 주문 화면 재현(시연용)" in sec8
     assert 'id="s8-briefing-entry"' in sec8
 
-    # 주문성 버튼 4종: 전부 disabled 정적 선언 + JS 클릭 배선 부재
-    for bid in ("s8-tab-buy", "s8-tab-sell", "s8-order-buy", "s8-order-sell"):
+    # 주문 버튼 2종(탭 없음 — 버튼과 중복이라 제거): disabled + JS 클릭 배선 부재
+    for bid in ("s8-order-buy", "s8-order-sell"):
         m = re.search(rf'<button[^>]*id="{bid}"[^>]*>', sec8)
         assert m, f"{bid} 버튼이 ⑧에 없습니다"
         assert "disabled" in m.group(0), f"{bid}가 disabled가 아닙니다"
@@ -236,8 +236,8 @@ def test_step0_order_replica_with_intercept():
         assert f'el("{bid}").addEventListener("click", openIntercept)' in js, \
             f"{bid}는 인터셉트 팝업 배선만 가져야 합니다"
 
-    # 방향 중립(전 시나리오 공통): side 강조·hidden 로직 부재
+    # 방향 중립(전 시나리오 공통): side 강조·hidden 로직 부재 + 탭 중복 제거 유지
     for forbidden in ('el("s8-order-buy").hidden', 'el("s8-order-sell").hidden',
-                      'el("s8-tab-buy").classList', 'el("s0-order-buy").hidden',
-                      'el("s0-tab-buy").classList'):
+                      'el("s0-order-buy").hidden', 'el("s0-order-sell").hidden'):
         assert forbidden not in js, f"side 강조/hidden 로직 잔존: {forbidden}"
+    assert "order-tab" not in html, "구매/판매 탭 잔존 — 버튼과 중복(사용자 지적 2026-07-17)"

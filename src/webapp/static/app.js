@@ -196,9 +196,9 @@ function renderChrome() {
    실행 버튼이 아니라 내비게이션이므로 ①~⑤ 주문 버튼 금지 제약과 무관. */
 function nextButtonLabel() {
   if (S.step >= 8) return "처음으로 →";
-  // ⑦ 종착 분기(계약 §9): 모의 체결이 있어야 실제 주문 화면(⑧ 재현)으로 —
-  // 보류 사용자는 주문 화면으로 유도하지 않는다.
-  if (S.step === 7) return S.settlement ? "실제 주문 화면으로 →" : "처음으로 →";
+  // ⑦ 종착 분기(계약 §9): 주문 의향을 유지한 상태면 실제 주문 화면(⑧)으로 —
+  // 모의 체결 여부와 무관(일지만 쓰고 주문 가는 경로 보존). 보류자는 미유도.
+  if (S.step === 7) return orderPlanFromIntent() ? "실제 주문 화면으로 →" : "처음으로 →";
   if (S.step === 5 && orderPlanFromIntent()) return "주문 화면으로 →";
   return "다음 단계 →";
 }
@@ -779,7 +779,7 @@ function wireEvents() {
   el("btn-prev").addEventListener("click", () => goStep(S.step - 1));
   el("btn-next").addEventListener("click", () => {
     if (S.step >= 8) return goStep(0);
-    if (S.step === 7 && !S.settlement) return goStep(0); // 보류 완주 → 처음으로(⑧ 미유도)
+    if (S.step === 7 && !orderPlanFromIntent()) return goStep(0); // 보류 완주 → 처음으로(⑧ 미유도)
     goStep(S.step + 1);
   });
   document.querySelectorAll("#progress .pg").forEach((b) => {
