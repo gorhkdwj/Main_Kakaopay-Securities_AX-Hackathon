@@ -513,3 +513,143 @@ textarea { resize: vertical; }
   #demo-panel { width: 210px; right: 10px; bottom: 10px; }
   .price-head.kp .pr { font-size: 30px; }
 }
+
+/* ── 동반자 패널(companion — 계약 §9 '동반자 패널'·§6 동반자 대화, D-0718-1120) ──
+   z-계층: FAB 65 < backdrop 70 < 시트·인터셉트 80(기존 팝업이 항상 위).
+   표시 토글은 hidden 속성만(전역 [hidden] 규칙 — T-0716-1510). */
+#companion-fab {
+  position: fixed; bottom: 88px; right: max(16px, calc(50vw - 199px));
+  z-index: 65;
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  background: #ffd338; color: var(--ink);
+  font-size: 20px; font-weight: 700; cursor: pointer;
+  box-shadow: var(--sh-float);
+}
+/* 오버레이 배타 규칙 — ⑥ 시트·인터셉트·패널 자신이 열려 있는 동안 FAB 숨김.
+   안전모드는 #phone 조상 숨김으로 구조적으로 함께 숨지만, 규칙을 명시해 둔다. */
+body:has(#sheet-backdrop:not([hidden])) #companion-fab,
+body:has(#intercept-backdrop:not([hidden])) #companion-fab,
+body:has(#companion-backdrop:not([hidden])) #companion-fab,
+body.safemode #companion-fab,
+body.safemode #companion-backdrop { display: none !important; }
+
+#companion-backdrop {
+  position: fixed; inset: 0; z-index: 70;
+  background: var(--dim);
+  display: flex; justify-content: center; align-items: flex-end;
+  padding: 0 0 10px;
+}
+#companion-backdrop:not([hidden]) { animation: dim-in .18s ease-out; }
+@keyframes cmp-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+#companion-backdrop:not([hidden]) > #companion-panel { animation: cmp-in .22s cubic-bezier(.2, .8, .3, 1); }
+#companion-panel {
+  width: 100%; max-width: 430px; height: 92%;
+  background: var(--bg); border-radius: 18px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.cmp-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 14px 16px 10px; border-bottom: 1px solid var(--line);
+}
+.cmp-title { font-size: 16.5px; font-weight: 800; color: var(--ink); }
+.cmp-pill {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 3px 8px; border-radius: 999px;
+  background: var(--chip-gray); color: var(--ink-2); white-space: nowrap;
+}
+#companion-close {
+  order: 1; margin-left: auto;
+  width: 34px; height: 34px; border-radius: 50%; border: none;
+  background: var(--chip-gray); color: var(--ink-2);
+  font-size: 15px; cursor: pointer; flex: none;
+}
+#companion-asof {
+  order: 2; flex-basis: 100%;
+  background: var(--down-bg); color: var(--down);
+  font-size: 11.5px; font-weight: 600; line-height: 1.4;
+  border-radius: 8px; padding: 5px 9px;
+}
+#companion-log { flex: 1; overflow-y: auto; padding: 12px 14px; background: var(--card-sub); }
+.cmp-msg { display: flex; flex-direction: column; margin: 10px 0; }
+.cmp-msg.u { align-items: flex-end; }
+.cmp-u-bubble {
+  max-width: 82%; background: var(--dark); color: #fff;
+  padding: 10px 14px; border-radius: 18px 18px 4px 18px;
+  font-size: 14.5px; line-height: 1.5;
+}
+.cmp-who { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+.cmp-dot {
+  width: 18px; height: 18px; border-radius: 50%; background: #ffd338; color: var(--ink);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; flex: none;
+}
+.cmp-bubble {
+  max-width: 94%; background: #fff; border: 1px solid var(--line);
+  border-radius: 4px 16px 16px 16px; padding: 12px 14px;
+  font-size: 14.5px; line-height: 1.6; color: var(--ink-2);
+}
+.cmp-bubble + .cmp-bubble { border-radius: 16px; margin-top: 6px; }
+.cmp-bubble b { color: var(--ink); }
+.cmp-line { padding: 3px 0; }
+.cmp-divider { border: none; border-top: 1px dashed #e3e6ea; margin: 8px 0; }
+.cmp-tag {
+  display: inline-block; font-size: 11px; font-weight: 800;
+  padding: 2.5px 7px; border-radius: 6px; margin: 0 6px 4px 0;
+}
+.cmp-tag.fact { background: var(--down-bg); color: var(--down); }
+.cmp-tag.pos { background: var(--up-bg); color: var(--up); }
+.cmp-tag.neg { background: var(--down-bg); color: var(--down); }
+.cmp-tag.unk { background: var(--chip-gray); color: var(--flat); }
+.cmp-tag.calc { background: #efe9ff; color: #6b3fd4; }
+.cmp-src {
+  display: inline-block; font-size: 10.5px; color: var(--sub);
+  background: var(--chip-gray); border-radius: 5px; padding: 1.5px 6px;
+  margin-left: 5px; white-space: nowrap;
+}
+.cmp-note { font-size: 12px; color: var(--sub); font-weight: 700; margin: 2px 0 4px; }
+.cmp-ask {
+  max-width: 94%; background: #fffdf3; border: 1px solid #f4e9c8;
+  border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1.55;
+  color: var(--ink-2); margin-top: 6px;
+}
+.cmp-state {
+  max-width: 94%; background: var(--chip-gray); color: var(--ink-2);
+  border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.5;
+}
+.cmp-guard { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: #0f9d58; font-weight: 600; margin-top: 5px; }
+.cmp-guard::before { content: "✓"; font-size: 11px; }
+.cmp-typing {
+  display: inline-flex; gap: 4px; align-items: center;
+  background: #fff; border: 1px solid var(--line);
+  border-radius: 4px 16px 16px 16px; padding: 13px 14px;
+}
+.cmp-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--hint); animation: cmp-blink 1s infinite; }
+.cmp-typing i:nth-child(2) { animation-delay: .18s; }
+.cmp-typing i:nth-child(3) { animation-delay: .36s; }
+@keyframes cmp-blink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+#companion-quick {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px 14px 2px; background: var(--card-sub);
+}
+.cmp-chip {
+  font-size: 13px; font-weight: 600; color: var(--down);
+  background: #fff; border: 1px solid #cfe1fb; border-radius: 999px;
+  padding: 7px 12px; cursor: pointer; font-family: inherit;
+}
+#companion-form { display: flex; align-items: center; gap: 8px; padding: 10px 14px 6px; background: var(--card-sub); }
+#companion-form input {
+  width: auto; flex: 1; border-radius: 999px; padding: 11px 16px; font-size: 15px;
+}
+.cmp-send {
+  width: 38px; height: 38px; flex: none; border-radius: 50%; border: none;
+  background: var(--dark); color: #fff; font-size: 15px; cursor: pointer;
+}
+.cmp-send:disabled { opacity: .4; cursor: default; }
+.cmp-foot {
+  margin: 0; padding: 4px 14px 12px; background: var(--card-sub);
+  font-size: 10.5px; color: var(--sub); text-align: center;
+}
+#companion-fab:focus-visible, #companion-close:focus-visible,
+.cmp-chip:focus-visible, .cmp-send:focus-visible {
+  outline: 2px solid var(--down); outline-offset: 2px;
+}
+/* ── /동반자 패널(companion) ── */

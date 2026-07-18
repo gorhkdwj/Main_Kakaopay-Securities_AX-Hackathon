@@ -27,6 +27,9 @@ API 명세(입출력 상세는 각 핸들러 docstring):
   POST /api/settle           {preview, confirmed_qty} → settle_order 모의 체결
   POST /api/record           투자 일지·회고 저장 → out/records/REC-*.json(계약 §3.3)
   GET  /api/safety           세션 누적 안전 지표 카운터(계약 §10)
+  POST /api/companion/chat   동반자 대화(계약 §6 companion) — 문답 캐시 → live LLM
+                             → 캐시 유사 → 안전 강등의 폴백 사슬, 렌더 전 guard 필수
+  GET  /api/companion/chips/{id}  동반자 빠른 질문 칩(사전 준비 문답 캐시의 질문 목록)
 """
 
 from __future__ import annotations
@@ -41,6 +44,18 @@ from fastapi import Body, FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from src.briefing.companion import (
+    COMPANION_SOURCE_LABELS,
+    MARKET_CONTEXT_SOURCE_ID,
+    append_companion_audit,
+    degraded_response,
+    generate_companion_reply,
+    load_companion_cache,
+    load_market_context,
+    market_asof_label,
+    sanitize_companion_response,
+    stock_asof_label,
+)
 from src.briefing.llm import append_audit, generate_briefing, resolve_mode
 from src.engine import (
     CALC_ID_PATTERN,
@@ -328,7 +343,9 @@ def create_app(fixtures_dir: "Path | str | None" = None,
                records_dir: "Path | str | None" = None,
                briefing_mode: "str | None" = None,
                llm_cache_dir: "Path | str | None" = None,
-               audit_dir: "Path | str | None" = None) -> FastAPI:
+               audit_dir: "Path | str | None" = None,
+               companion_cache_dir: "Path | str | None" = None,
+               snapshots_dir: "Path | str | None" = None) -> FastAPI:
     """웹 UI FastAPI 앱을 만든다.
 
     Args:
@@ -337,9 +354,13 @@ def create_app(fixtures_dir: "Path | str | None" = None,
         records_dir: 판단 기록 저장 디렉터리(기본 out/records — Git 제외).
         briefing_mode: 브리핑 원천 모드(auto|live|cache|static — 기본은
             BRIEFING_MODE 환경변수, 그것도 없으면 auto). 테스트는 "cache"를
-            명시해 네트워크 시도를 원천 차단한다.
+            명시해 네트워크 시도를 원천 차단한다. 동반자 대화의 live 시도
+            여부도 이 모드를 따른다(auto·live에서만 live 시도).
         llm_cache_dir: LLM 응답 캐시 디렉터리(기본 data/fixtures/llm_cache).
         audit_dir: 감사로그 디렉터리(기본 out/audit — Git 제외).
+        companion_cache_dir: 동반자 문답 캐시 디렉터리(기본
+            data/fixtures/companion_cache).
+        snapshots_dir: market_context 스냅샷 디렉터리(기본 data/snapshots).
     """
     app = FastAPI(title="판단 여권 · 데모", docs_url=None, redoc_url=None,
                   openapi_url=None)  # 문서 UI는 CDN 자산을 쓰므로 오프라인 원칙상 비활성
@@ -349,6 +370,9 @@ def create_app(fixtures_dir: "Path | str | None" = None,
     app.state.briefing_mode = resolve_mode(briefing_mode)
     app.state.llm_cache_dir = Path(llm_cache_dir) if llm_cache_dir else None
     app.state.audit_dir = Path(audit_dir) if audit_dir else None
+    app.state.companion_cache_dir = (
+        Path(companion_cache_dir) if companion_cache_dir else None)
+    app.state.snapshots_dir = Path(snapshots_dir) if snapshots_dir else None
     app.state.session_id = f"{datetime.datetime.now():%m%d-%H%M%S}"
     app.state.record_seq = itertools.count(1)
     # 세션 누적 안전 지표(계약 §10 — 화면 상시 카운터의 원천)
@@ -768,6 +792,125 @@ def create_app(fixtures_dir: "Path | str | None" = None,
             json.dump(record, fp, ensure_ascii=False, indent=2)
 
         return {"ok": True, "record": record, "safety": safety_snapshot()}
+
+    @app.post("/api/companion/chat")
+    def api_companion_chat(payload: dict = Body(...)):
+        """동반자 대화(계약 §6 companion·§9 동반자 패널) — 폴백 사슬 + guard.
+
+        입력: {scenario_id: str, question: str, step?, flow_side?("buy"|"sell"),
+               history?: [{role, text}]} (구현제안 §2 — 서버 무상태, 이력은 클라 보관)
+        처리: 사전 준비 문답 캐시(빠른 칩 질문 매칭) → live LLM(auto·live 모드
+              + 키 존재 시) → 캐시 유사 질문 → 안전 강등 문구. 어떤 원천이든
+              guard(check_response — 숫자 대사·출처 실재)와 reply_text 검사
+              (§7 사전 + 허용 숫자 대조)를 통과한 정화본만 반환한다.
+              차단은 세션 안전 지표에 합산되고, 모든 시도는
+              out/audit/companion_events.jsonl에 기록된다(실패 은폐 금지).
+        출력: {ok, scenario_id, source("cache"|"live"|"degraded"), source_label,
+               reply(계약 §6 + reply_text), guard: {policy_result, record,
+               reply_text_blocked}, asof: {stock, market, delay_note}, safety}
+        """
+        scenario_id = payload.get("scenario_id")
+        question = payload.get("question")
+        if not isinstance(question, str) or not question.strip():
+            return _err(400, "empty_question", "질문을 입력해 주세요.",
+                        safety_snapshot())
+        try:
+            fx = load_fixture(scenario_id)
+        except FixtureInvalidError as exc:
+            return _fixture_invalid_response(exc)
+        if fx is None:
+            return _err(404, "not_found",
+                        f"시나리오 '{scenario_id}'를 찾을 수 없어요 — fixture 파일이 없어요.")
+
+        step = payload.get("step")
+        flow_side = payload.get("flow_side")
+        history = payload.get("history")
+
+        # 시장 컨텍스트는 실데이터 시나리오에만 주입한다 — 가상 시나리오에 실지표를
+        # 섞으면 혼용 금지(계약 §1)·기준시각 정합이 깨진다.
+        market_ctx = None
+        if fx.get("is_synthetic") is False:
+            market_ctx = load_market_context(app.state.snapshots_dir)
+
+        response, source, attempts, entry = generate_companion_reply(
+            fx, scenario_id, question.strip(),
+            mode=app.state.briefing_mode,
+            history=history if isinstance(history, list) else [],
+            step=step, flow_side=flow_side, market_ctx=market_ctx,
+            price_source_id=PRICE_FACT_SOURCE.get(scenario_id),
+            cache_dir=app.state.companion_cache_dir,
+        )
+        if response is None:
+            response = degraded_response(scenario_id)
+
+        # guard 허용 숫자 = fixture 원천값 + 시장 스냅샷 + 캐시에 동봉된 엔진
+        # 계산·결정론 파생값(LLM 산수 금지 — 계약 §6 companion)
+        allowed = collect_allowed_numbers(
+            fx, market_ctx,
+            (entry or {}).get("calculations"),
+            (entry or {}).get("allowed_extra_numbers"),
+        )
+        known = known_source_ids_for(fx, scenario_id)
+        if market_ctx is not None:
+            known.add(MARKET_CONTEXT_SOURCE_ID)
+        sanitized, record, reply_text_blocked = sanitize_companion_response(
+            response, allowed_numbers=allowed, known_source_ids=known)
+        accumulate_guard(sanitized, record)
+
+        append_companion_audit({
+            "scenario_id": scenario_id, "mode": app.state.briefing_mode,
+            "source": source, "attempts": attempts,
+            "step": step, "flow_side": flow_side,
+            "blocked": len(record["blocked"]),
+            "reply_text_blocked": reply_text_blocked,
+            "question_head": question.strip()[:60],
+        }, app.state.audit_dir)
+
+        return {
+            "ok": True,
+            "scenario_id": scenario_id,
+            "source": source,
+            "source_label": COMPANION_SOURCE_LABELS.get(source, source),
+            "reply": sanitized,
+            "guard": {
+                "policy_result": sanitized.get("policy_result"),
+                "record": record,
+                "reply_text_blocked": reply_text_blocked,
+            },
+            "asof": {
+                "stock": stock_asof_label(fx),
+                "market": market_asof_label(market_ctx),
+                "delay_note": (fx.get("data_origin") or {}).get("delay_note"),
+            },
+            "safety": safety_snapshot(),
+        }
+
+    @app.get("/api/companion/chips/{scenario_id}")
+    def api_companion_chips(scenario_id: str):
+        """동반자 빠른 질문 칩 — 사전 준비 문답 캐시의 질문 목록(캐시 없으면 빈 목록).
+
+        출력: {ok, scenario_id, chips: [{qa_id, label, question}], cache_state, safety}
+        """
+        try:
+            fx = load_fixture(scenario_id)
+        except FixtureInvalidError as exc:
+            return _fixture_invalid_response(exc)
+        if fx is None:
+            return _err(404, "not_found",
+                        f"시나리오 '{scenario_id}'를 찾을 수 없어요 — fixture 파일이 없어요.")
+        qa, reason = load_companion_cache(
+            scenario_id, fx, app.state.companion_cache_dir)
+        chips = [
+            {
+                "qa_id": e.get("qa_id"),
+                "label": e.get("chip") or e.get("question"),
+                "question": e.get("question"),
+            }
+            for e in (qa or [])
+            if isinstance(e.get("question"), str)
+        ]
+        return {"ok": True, "scenario_id": scenario_id, "chips": chips,
+                "cache_state": reason, "safety": safety_snapshot()}
 
     @app.get("/api/safety")
     def api_safety() -> dict:

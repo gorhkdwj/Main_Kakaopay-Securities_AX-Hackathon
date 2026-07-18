@@ -226,6 +226,30 @@
     <button id="btn-prev" class="btn nav" type="button">← 돌아가기</button>
     <button id="btn-next" class="btn nav" type="button">다음 단계 →</button>
   </div>
+
+  <!-- companion: 동반자 대화 패널(전역 오버레이 — 계약 §9 동반자 패널·§6 동반자 대화, D-0718-1120).
+       hidden 속성 토글만 사용(T-0716-1510). 이 구간에는 주문 실행 UI가 없다 —
+       핸드오프는 ⑥ 모의 주문·투자 일지로의 내비게이션만(계약 §9). -->
+  <button id="companion-fab" type="button" aria-label="동반자와 대화">◆</button>
+  <div id="companion-backdrop" hidden>
+    <section id="companion-panel" role="dialog" aria-modal="true" aria-label="동반자 대화">
+      <header class="cmp-head">
+        <b class="cmp-title">동반자</b> <span class="cmp-pill">판단 여권 AI</span>
+        <span id="companion-asof" aria-live="polite"></span>
+        <button id="companion-close" type="button" aria-label="닫기">✕</button>
+      </header>
+      <div id="companion-log" aria-live="polite" aria-label="동반자 대화 내용"></div>
+      <div id="companion-quick" role="group" aria-label="빠른 질문"></div>
+      <form id="companion-form">
+        <input id="companion-input" type="text" autocomplete="off"
+          aria-label="동반자에게 질문 입력"
+          placeholder="궁금한 걸 물어보세요 — 결정은 당신의 몫이에요">
+        <button id="companion-send" class="cmp-send" type="submit" aria-label="질문 보내기">↑</button>
+      </form>
+      <p class="cmp-foot">교육용 데모 · 실제 거래 아님 — 이 대화에는 주문 실행 버튼이 없어요</p>
+    </section>
+  </div>
+  <!-- /companion -->
 </main>
 
 <!-- 장애 안전모드 — DEMO 패널 토글로 어느 화면 위에서든 전환되는 보기 방식(계약 §8) -->

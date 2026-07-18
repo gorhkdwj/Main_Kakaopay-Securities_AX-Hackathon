@@ -21,6 +21,10 @@ const S = {
   settlement: null,
   savedRecord: null,
   briefingLoading: false, // ② 브리핑 생성 중 여부(진입 지연 생성 — D-0718-0355)
+  companion: {            // 동반자 패널 대화 상태(클라 메모리 보관 — 서버 무상태, 계약 §6)
+    booted: false, entries: [], history: [], chips: [], seedChips: [],
+    loading: false, asof: null,
+  },
 };
 
 const STEP_NAMES = ["주문 화면(진입)", "① 종목·계획", "② 관련 사실", "③ 체크리스트",
@@ -163,6 +167,7 @@ async function loadScenario(id) {
   S.settlement = null;
   S.savedRecord = null;
   S.briefingLoading = false;  // 브리핑은 '브리핑 시작' 시점에 별도 요청(D-0718-0355)
+  resetCompanion();           // 동반자 대화는 시나리오 단위 — 전환 시 초기화(계약 §6 컨텍스트)
   el("diary-input").value = "";
   el("retro-input").value = "";
   el("sim-badge").textContent = S.data.meta.badge_text;
@@ -1031,11 +1036,270 @@ function toggleSafemode(onFlag) {
   if (onFlag) {
     el("sheet-backdrop").hidden = true; // 열린 재확인 시트도 주문 유도 — 강제로 닫는다
     closeIntercept();                   // 진입 팝업도 동일 취급
+    closeCompanion();                   // 대화도 판단 재료 공급원 — 함께 강등(계약 §9)
     renderSafemode();
   }
   renderChrome();
   window.scrollTo({ top: 0 });
 }
+
+/* ── 동반자 패널(companion) — 계약 §9 '동반자 패널'·§6 동반자 대화(D-0718-1120) ──
+   - FAB(#companion-fab)로 어느 화면에서든 호출하는 전역 오버레이. 표시 토글은
+     hidden 속성만 사용한다(전역 [hidden] 규칙 — T-0716-1510).
+   - 이 패널 안에는 주문 실행 UI가 없다(계약 §9 금지 마커·문구 0).
+   - 숫자·사실은 전부 서버(스냅샷·엔진·guard 통과 응답)의 텍스트를 표시만 한다 —
+     이 파일은 산수를 하지 않는다.
+   - 어떤 실패도 조용히 넘기지 않는다(T-0716-2046) — 안전 강등 문구를 렌더. */
+
+const CMP_INTRO =
+  "안녕하세요, 동반자예요. 결론을 대신 정해드릴 수는 없지만, " +
+  "결정에 필요한 사실과 계산을 함께 정리해드릴 수 있어요. 궁금한 걸 물어보세요.";
+const CMP_DEGRADED = "지금은 답변을 준비할 수 없어요 — 화면의 사실 카드를 참고해 주세요.";
+
+/* 씨앗 질문 폴백(백엔드 캐시 미응답 시) — 목업의 4문답 흐름을 흐름 방향에 맞춰 축약 */
+function cmpDefaultSeeds() {
+  return S.flowSide === "sell"
+    ? ["지금 팔아야 할까요?", "나눠 팔까요, 한 번에 팔까요?", "오늘 왜 이렇게 움직였어요?"]
+    : ["지금 사도 괜찮을까요?", "나눠 살까요, 한 번에 살까요?", "오늘 왜 이렇게 움직였어요?"];
+}
+
+function resetCompanion() {
+  S.companion = {
+    booted: false, entries: [], history: [], chips: [], seedChips: [],
+    loading: false, asof: null,
+  };
+  const bd = el("companion-backdrop");
+  if (bd) bd.hidden = true;
+  renderCompanionLog();
+  renderCompanionQuick();
+  renderCompanionAsof();
+}
+
+function openCompanion() {
+  if (!S.data) return; // 시나리오 로드 전 — 불러오기 오류 카드가 상황을 안내한다
+  el("companion-backdrop").hidden = false;
+  renderCompanionAsof();
+  if (!S.companion.booted) {
+    S.companion.booted = true;
+    S.companion.entries.push({ kind: "text", text: CMP_INTRO });
+    loadCompanionSeeds(); // 비동기 — 씨앗 칩 도착 시 renderCompanionQuick 재호출
+  }
+  renderCompanionLog();
+  renderCompanionQuick();
+  el("companion-input").focus();
+}
+function closeCompanion() {
+  const bd = el("companion-backdrop");
+  if (bd) bd.hidden = true;
+}
+
+/* 패널 상단 기준시각 바 — 기준시각·데이터 성격(가상/지연) 상시 고지(계약 §9) */
+function renderCompanionAsof() {
+  const bar = el("companion-asof");
+  if (!bar) return;
+  if (!S.data) { bar.textContent = ""; return; }
+  const m = S.data.meta;
+  const asof = S.companion.asof || m.as_of;
+  bar.textContent = m.is_synthetic
+    ? `가상 기준시각 ${asof} · 교육용 가상 데이터 — 실시간 시세가 아니에요`
+    : `기준시각 ${asof} · 지연 시세 — 실시간이 아니에요`;
+}
+function updateCompanionAsof(facts) {
+  const withAsof = (facts || []).filter((f) => f && f.as_of);
+  if (withAsof.length) {
+    S.companion.asof = withAsof[withAsof.length - 1].as_of;
+    renderCompanionAsof();
+  }
+}
+
+/* 씨앗 질문(백엔드 캐시) — GET /api/companion/chips/{id}(캐시 문답의 칩 목록).
+   칩 라벨은 캐시 match_questions에 포함되어 있어 탭 시 캐시 정확 일치로 응답한다.
+   캐시 없음·실패 시 기본 칩 폴백(조용한 실패 없음: 칩은 항상 채운다) */
+async function loadCompanionSeeds() {
+  const c = S.companion;
+  const r = await api("/api/companion/chips/" + encodeURIComponent(S.scenarioId));
+  const raw = r.body && r.body.ok ? (r.body.chips || r.body.seeds || r.body.questions) : null;
+  const seeds = Array.isArray(raw)
+    ? raw.map((x) => (typeof x === "string" ? x : x && (x.label || x.question)))
+        .filter(Boolean)
+    : [];
+  c.seedChips = seeds.length ? seeds.slice(0, 4) : cmpDefaultSeeds();
+  if (!c.chips.length && !c.loading) c.chips = c.seedChips.slice();
+  renderCompanionQuick();
+}
+
+/* 현재 화면의 계산 ID(구현제안 §2 컨텍스트) — 의향 계획 우선, 없으면 방향 기본 슬롯 */
+function cmpActiveCalcId() {
+  const plan = orderPlanFromIntent();
+  const key = plan ? plan.key : (S.flowSide === "sell" ? "partial" : "b10");
+  const slot = S.previews[key];
+  return slot && slot.preview ? slot.preview.calculation_id : null;
+}
+
+/* 응답 봉투 해석 — {ok, reply:{계약 §6 + reply_text}} 형태(구현제안 §3) */
+function cmpExtractReply(body) {
+  if (!body || body.ok !== true) return null;
+  if (body.reply && typeof body.reply === "object") return body.reply;
+  if (body.response && typeof body.response === "object") return body.response;
+  if (body.facts || body.reply_text || body.unknowns) return body;
+  return null;
+}
+function cmpGuardLabel(guard) {
+  if (guard && guard.policy_result === "blocked_partial") {
+    return "가드 — 일부 내용이 안전 규칙으로 차단됐어요";
+  }
+  return "가드 통과 — 출처·표현·기준시각 검사";
+}
+
+async function sendCompanionQuestion(question) {
+  const c = S.companion;
+  const q = String(question || "").trim();
+  if (!q || c.loading || !S.scenarioId) return;
+  c.entries.push({ kind: "user", text: q });
+  c.history.push({ role: "user", text: q });
+  c.loading = true;
+  c.chips = [];
+  renderCompanionQuick();
+  renderCompanionLog();
+  const r = await api("/api/companion/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      scenario_id: S.scenarioId,
+      step: S.step,
+      flow_side: S.flowSide,
+      active_calculation_id: cmpActiveCalcId(),
+      question: q,
+      history: c.history.slice(0, -1), // 이번 질문 이전까지의 이력
+    }),
+  });
+  c.loading = false;
+  const rep = cmpExtractReply(r.body);
+  if (rep) {
+    const guard = (r.body && r.body.guard) || rep.guard || null;
+    c.entries.push({
+      kind: "reply", data: rep,
+      source: (r.body && (r.body.reply_source || r.body.source || r.body.companion_source)) || null,
+      guardLabel: cmpGuardLabel(guard),
+      oneSided: Boolean(guard && guard.record && (guard.record.warnings || [])
+        .some((w) => w.code === "one_sided_interpretation")),
+    });
+    c.history.push({
+      role: "assistant",
+      text: rep.reply_text || (((rep.facts || [])[0] || {}).text || "(카드 응답)"),
+    });
+    updateCompanionAsof(rep.facts);
+    const quick = rep.quick_questions || rep.next_questions || [];
+    c.chips = quick.slice(0, 4);
+  } else {
+    // 폴백 사슬의 끝(계약 §6) — 실패를 숨기지 않고 안전 강등 문구를 그대로 보여준다
+    c.entries.push({ kind: "state", text: CMP_DEGRADED });
+    c.history.push({ role: "assistant", text: CMP_DEGRADED });
+    c.chips = (c.seedChips.length ? c.seedChips : cmpDefaultSeeds()).slice();
+  }
+  if (c.history.length > 12) c.history = c.history.slice(-12);
+  renderCompanionLog();
+  renderCompanionQuick();
+}
+
+/* 응답 카드 렌더 — 목업의 카드 문법: 사실(+출처·기준시각)/양면 해석/모름/계산/가드/되묻기 */
+function renderCompanionReplyHtml(entry) {
+  const d = entry.data || {};
+  const parts = [];
+  if (d.reply_text) parts.push(`<div class="cmp-bubble">${esc(d.reply_text)}</div>`);
+
+  let card = "";
+  (d.facts || []).forEach((f) => {
+    card += `<div class="cmp-line"><span class="cmp-tag fact">사실</span><span class="cmp-src">출처 ${esc(f.source_id)} · 기준시각 ${esc(f.as_of)}</span><div>${esc(f.text)}</div></div>`;
+  });
+  if (d.calculation_id) {
+    card += `<div class="cmp-line"><span class="cmp-tag calc">계산 — 결정론 엔진</span><span class="cmp-src">${esc(d.calculation_id)}</span></div>`;
+  }
+  const interps = d.interpretations || [];
+  if (interps.length) {
+    card += `<hr class="cmp-divider"><div class="cmp-note">해석 — 사실이 아니에요</div>`;
+    interps.forEach((it) => {
+      const cls = it.stance === "긍정 시각" ? "pos" : "neg";
+      card += `<div class="cmp-line"><span class="cmp-tag ${cls}">${esc(it.stance)}</span><div>${esc(it.text)}</div></div>`;
+    });
+    if (entry.oneSided) {
+      card += `<div class="cmp-line"><span class="cmp-tag unk">반대 시각 확인 안 됨</span></div>`;
+    }
+  }
+  const unknowns = d.unknowns || [];
+  if (unknowns.length) {
+    card += `<hr class="cmp-divider">`;
+    unknowns.forEach((u) => {
+      card += `<div class="cmp-line"><span class="cmp-tag unk">모름</span><div>${esc(u)}</div></div>`;
+    });
+  }
+  if (card) parts.push(`<div class="cmp-bubble">${card}</div>`);
+
+  const asks = d.next_questions || [];
+  if (asks.length) {
+    parts.push(`<div class="cmp-ask">💬 ${asks.map((a) => esc(a)).join("<br>")}</div>`);
+  }
+  parts.push(`<div class="cmp-guard">${esc(entry.guardLabel || cmpGuardLabel(null))}</div>`);
+  return `<div class="cmp-msg a"><div class="cmp-who"><span class="cmp-dot">◆</span> 동반자${cmpSourcePill(entry.source)}</div>${parts.join("")}</div>`;
+}
+function cmpSourcePill(source) {
+  const label = BRIEFING_SOURCE_LABELS[source];
+  return label ? ` <span class="cmp-pill">${esc(label)}</span>` : "";
+}
+
+function renderCompanionLog() {
+  const log = el("companion-log");
+  if (!log) return;
+  const c = S.companion;
+  let html = "";
+  c.entries.forEach((e) => {
+    if (e.kind === "user") {
+      html += `<div class="cmp-msg u"><div class="cmp-u-bubble">${esc(e.text)}</div></div>`;
+    } else if (e.kind === "text") {
+      html += `<div class="cmp-msg a"><div class="cmp-who"><span class="cmp-dot">◆</span> 동반자</div><div class="cmp-bubble">${esc(e.text)}</div></div>`;
+    } else if (e.kind === "state") {
+      html += `<div class="cmp-msg a"><div class="cmp-who"><span class="cmp-dot">◆</span> 동반자</div><div class="cmp-state">${esc(e.text)}</div></div>`;
+    } else {
+      html += renderCompanionReplyHtml(e);
+    }
+  });
+  if (c.loading) {
+    html += `<div class="cmp-msg a"><div class="cmp-who"><span class="cmp-dot">◆</span> 동반자</div><div class="cmp-typing" aria-label="응답을 준비하고 있어요"><i></i><i></i><i></i></div></div>`;
+  }
+  log.innerHTML = html;
+  log.scrollTop = log.scrollHeight;
+  const input = el("companion-input");
+  const send = el("companion-send");
+  if (input) input.disabled = c.loading;
+  if (send) send.disabled = c.loading;
+}
+
+function renderCompanionQuick() {
+  const quick = el("companion-quick");
+  if (!quick) return;
+  quick.innerHTML = (S.companion.chips || []).map((q) =>
+    `<button type="button" class="cmp-chip">${esc(q)}</button>`).join("");
+}
+
+function wireCompanion() {
+  el("companion-fab").addEventListener("click", openCompanion);
+  el("companion-close").addEventListener("click", closeCompanion);
+  el("companion-backdrop").addEventListener("click", (ev) => {
+    if (ev.target === el("companion-backdrop")) closeCompanion(); // 딤 탭 = 닫기
+  });
+  el("companion-quick").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".cmp-chip");
+    if (btn) sendCompanionQuestion(btn.textContent);
+  });
+  el("companion-form").addEventListener("submit", (ev) => {
+    ev.preventDefault(); // 페이지 이동 없이 API 호출만
+    const q = el("companion-input").value.trim();
+    if (!q) return;
+    el("companion-input").value = "";
+    sendCompanionQuestion(q);
+  });
+}
+/* ── /동반자 패널(companion) ─────────────────────────── */
 
 /* ── 이벤트 배선 ──────────────────────────────────────── */
 function wireEvents() {
@@ -1115,6 +1379,7 @@ function wireEvents() {
     if (ev.target.checked) closeIntercept(); // 전체 펼침 열람을 팝업이 가리지 않게
     renderChrome();
   });
+  wireCompanion(); // 동반자 패널(전역 오버레이 — 계약 §9)
 }
 
 /* ── 시작 ─────────────────────────────────────────────── */
