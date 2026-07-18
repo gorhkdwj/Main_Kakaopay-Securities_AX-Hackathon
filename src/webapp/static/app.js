@@ -550,7 +550,7 @@ function renderStep2() {
     <div class="kcard">
       <div class="tag fact">확인된 사실</div>
       <div class="fact-text">${esc(f.text)}</div>
-      <div class="ai-meta"><span class="src-badge">◆ 출처 ${esc(f.source_id)}(가상)</span><span class="asof-text">기준시각 ${esc(f.as_of)}</span></div>
+      <div class="ai-meta"><span class="src-badge">◆ 출처 ${esc(f.source_id)}${m.is_synthetic ? "(가상)" : "(실데이터·지연)"}</span><span class="asof-text">기준시각 ${esc(f.as_of)}</span></div>
     </div>`).join("");
   if (m.disclosures_state) {
     facts += `<div class="kcard state">공시 — ${esc(m.disclosures_state)} · 여기서는 값을 만들어 채우지 않아요</div>`;

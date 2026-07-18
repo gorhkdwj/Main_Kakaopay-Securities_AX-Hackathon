@@ -45,7 +45,7 @@ check_response(response, calculation=None, *,
 검사 파이프라인(순서 고정 — 결정론 보장):
     ① facts 구조 검사: source_id 또는 as_of 누락/빈 값 → 해당 fact 차단.
        source_id가 계약 §2 형식(`F-/C-/X-SRC-####` 4자리 또는
-       `DEMO-SRC-###` 3자리, SOURCE_ID_RE)과 불일치 → 차단.
+       `DEMO-SRC-###`·`YF-SRC-###` 3자리, SOURCE_ID_RE)과 불일치 → 차단.
        known_source_ids가 주어지면 형식 통과 후 **실재 검사**(집합 미포함
        → 차단, rule_id SRC-EXIST — S5 격상: 형식 검사로 갈음하던 v1 한계 해소).
        한 fact가 source_id·as_of를 모두 위반하면 blocked에 2건 기록하고
@@ -145,9 +145,10 @@ from decimal import Decimal, InvalidOperation
 
 from src.policy.lexicon import LEXICON_VERSION, find_violations
 
-# 계약 §2 — source_id 체계: 리서치 근거 `F-/C-/X-SRC-####`(4자리) 또는
-# 데모 가상 출처 `DEMO-SRC-###`(3자리)만 유효.
-SOURCE_ID_RE = re.compile(r"^(?:[FCX]-SRC-\d{4}|DEMO-SRC-\d{3})$")
+# 계약 §2 — source_id 체계: 리서치 근거 `F-/C-/X-SRC-####`(4자리),
+# 데모 가상 출처 `DEMO-SRC-###`(3자리), 실데이터 스냅샷 출처 `YF-SRC-###`
+# (3자리 — 계약 §3.1-b 실종목 fixture 확장)만 유효.
+SOURCE_ID_RE = re.compile(r"^(?:[FCX]-SRC-\d{4}|(?:DEMO|YF)-SRC-\d{3})$")
 
 # 숫자 대사(①-2) — 텍스트에서 숫자 토큰을 뽑는 규칙: 콤마 자릿수 구분·소수 허용.
 # 부호는 토큰에 포함하지 않는다(절대값 비교 — 모듈 docstring의 책임 분리).

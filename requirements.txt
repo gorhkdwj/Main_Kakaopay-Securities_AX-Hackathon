@@ -2,6 +2,6 @@ fastapi
 uvicorn
 pytest
 httpx
-yfinance
+yfinance==1.5.1  # W4 실데이터 수집 — D-0718-1110
 pykrx
 python-dotenv

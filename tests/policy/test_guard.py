@@ -64,6 +64,7 @@ def warning_codes(record):
 class TestSourceIdFormat:
     @pytest.mark.parametrize("source_id", [
         "DEMO-SRC-101", "DEMO-SRC-999", "F-SRC-0001", "C-SRC-0130", "X-SRC-1234",
+        "YF-SRC-001", "YF-SRC-999",  # 실데이터 스냅샷 출처(계약 §3.1-b)
     ])
     def test_valid_ids(self, source_id):
         assert SOURCE_ID_RE.match(source_id)
@@ -76,6 +77,9 @@ class TestSourceIdFormat:
         "Z-SRC-0001",      # 미정의 접두
         "demo-src-101",    # 소문자
         "F-CLM-0099",      # 클레임 ID는 출처 ID가 아님
+        "YF-SRC-1",        # 자릿수 미달(###)
+        "YF-SRC-1234",     # 자릿수 초과(###)
+        "yf-src-001",      # 소문자
     ])
     def test_invalid_ids(self, source_id):
         assert not SOURCE_ID_RE.match(source_id)

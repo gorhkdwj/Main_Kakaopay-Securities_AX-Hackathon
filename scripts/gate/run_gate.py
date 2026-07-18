@@ -43,6 +43,9 @@ SAFETY_SET_PATH = PROJECT_ROOT / "tests" / "policy" / "safety_set.json"
 STATIC_DIR = PROJECT_ROOT / "src" / "webapp" / "static"
 AUDIT_DIR = PROJECT_ROOT / "out" / "audit"
 
+#: 게이트 스위프 추가 대상(계약 §3.1-b 실종목) — fixture 존재 시에만 스위프에 포함
+EXTRA_SWEEP_SCENARIOS = ("real_005930",)
+
 #: 위험 고지 4종(계약 §9) — 화면 소스에 있어야 하는 기준 문구
 DISCLOSURE_PROBES = {
     "비용(수수료·세금)": ["수수료", "세금"],
@@ -86,7 +89,11 @@ def check_briefing_sweep(mode: str) -> dict:
     """② 브리핑 스위프 — 실제 원천 사슬 결과가 guard를 무차단 통과해야 한다."""
     scenarios = {}
     passed = True
-    for sid in SCENARIO_ORDER:
+    sweep_ids = list(SCENARIO_ORDER)
+    sweep_ids += [s for s in EXTRA_SWEEP_SCENARIOS
+                  if s not in sweep_ids
+                  and (FIXTURES_DIR / f"scenario_{s}.json").exists()]
+    for sid in sweep_ids:
         with open(FIXTURES_DIR / f"scenario_{sid}.json", encoding="utf-8") as fp:
             fx = json.load(fp)
         response, source, attempts = generate_briefing(

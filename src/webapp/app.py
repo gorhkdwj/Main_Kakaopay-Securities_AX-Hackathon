@@ -71,6 +71,9 @@ SCENARIO_TITLES = {
     "loss8": "-8% 급락 · 가온전자 보유",
     "profit15": "+15% 수익 · 한빛식품 보유",
     "first_buy": "첫 구매 검토 · 다온소재",
+    # 실종목 시나리오(계약 §3.1-b) — fixture 존재 시에만 목록에 나타난다
+    # (/api/scenarios는 디렉터리 스캔). 계좌성 값은 교육용 모의 값.
+    "real_005930": "실데이터 스냅샷 · 005930.KS",
 }
 
 #: 시세·거래량 사실 카드의 source_id(계약 §2 — 끝자리 02=시세·거래량,
@@ -79,6 +82,9 @@ PRICE_FACT_SOURCE = {
     "loss8": "DEMO-SRC-102",
     "profit15": "DEMO-SRC-202",
     "first_buy": "DEMO-SRC-302",
+    # 실종목(계약 §3.1-b): 측정 사실 카드가 YF-SRC-001부터 최대 004까지
+    # 쓰므로(어댑터 build_real_scenario.py) 시세·거래량 카드는 005를 예약.
+    "real_005930": "YF-SRC-005",
 }
 PRICE_FACT_SOURCE_BY_NAME = {
     "가온전자": "DEMO-SRC-102",
@@ -101,6 +107,10 @@ SCENARIO_UNKNOWNS = {
     "first_buy": [
         "이익 증가가 이어질지는 다음 실적 발표에서 확인됩니다.",
         "경쟁사와 견준 성장 속도는 이 화면의 데이터만으로는 비교할 수 없습니다.",
+    ],
+    "real_005930": [
+        "이번 하락에서 업황 요인과 수급 요인은 이 화면의 데이터만으로 구분할 수 없습니다.",
+        "공시된 실적 발표 예정일의 실제 내용은 발표 시점에야 확인됩니다.",
     ],
 }
 
@@ -537,10 +547,18 @@ def create_app(fixtures_dir: "Path | str | None" = None,
             hold = None  # 필드 누락 시 '확인 불가'(대체값 생성 금지 — 계약 §8)
 
         as_of = fx.get("as_of")
-        badge_text = (
-            f"교육용 가상 데이터 (가상 기준시각 {as_of})" if as_of
-            else "교육용 가상 데이터"
-        )
+        if fx.get("is_synthetic") is False:
+            # 실종목 fixture(계약 §3.1-b) — 가상 배지와 구분: 실데이터 스냅샷
+            # 기준(지연)이며 보유·계획·예수금 등 계좌성 값은 교육용 모의 값.
+            badge_text = (
+                f"교육용 모의 환경 — 실데이터 스냅샷 기준(지연, {as_of})" if as_of
+                else "교육용 모의 환경 — 실데이터 스냅샷 기준(지연)"
+            )
+        else:
+            badge_text = (
+                f"교육용 가상 데이터 (가상 기준시각 {as_of})" if as_of
+                else "교육용 가상 데이터"
+            )
         side = "buy" if (holding.get("qty") or 0) == 0 else "sell"
 
         # 등락 금액(원) — 서버 파생 결정론 계산(계약 §3.1: 프런트 산수 금지·계산과 말의 분리)

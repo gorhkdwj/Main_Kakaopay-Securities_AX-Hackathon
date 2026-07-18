@@ -49,10 +49,29 @@
 | past_records[] | arr | 선택 | **지난 투자 일지**(①화면 리마인드 원천 — D-0716-1352) {recorded_at(YYYY-MM-DD), side("buy"·"sell"), qty(int≥1), reason_text(비어 있지 않은 str — 사용자 자신의 글, guard 검사 대상 아님·인용 표시로 렌더)} — loss8·profit15: 매수 당시 일지 1건 시드 · first_buy: 필드 없음(첫 거래 정합) |
 | discovery_context | obj | 선택 | **진입 맥락**(⑤화면 투자 일지 자동완성 초안 원천 — D-0716-1346) {path, theme, criteria(각 비어 있지 않은 str), entered_at(YYYY-MM-DD HH:mm KST)} — first_buy만: "탐색하기 > 기업가치로 탐색하기" > "꾸준히 매출 좋은 주식" |
 
+### 3.1-b 실종목 시나리오 fixture — `data/fixtures/scenario_real_{ticker}.json` (D-0718-1110-main)
+§3.1과 동일 스키마를 따르되 아래 델타만 다르다. **원천**: yfinance 스냅샷 1회 수집·동결(§3.2) → 어댑터 `scripts/data/build_real_scenario.py`가 변환(수기 숫자 입력 금지 — 계산·생성 분리).
+
+| 델타 항목 | 규칙 |
+|---|---|
+| scenario_id | `real_{티커숫자}` (예: `real_005930`) |
+| is_synthetic | **false** — 이때 `data_origin` 필수: {source("Yahoo Finance via yfinance"), collected_at(KST), delay_note("거래소 시세 지연(최대 20분) — 실시간 아님"), snapshot_ref(원천 스냅샷 파일명)} |
+| 화면 배지 | 가상("교육용 가상 데이터")과 구분: **"교육용 모의 환경 — 실데이터 스냅샷 기준"**. 보유·계획·예수금 등 계좌성 값은 교육용 모의 값임을 병기 |
+| instrument.code | 실제 티커(`005930.KS` 등). market은 접미사 매핑(.KS→KOSPI, .KQ→KOSDAQ) |
+| price / price.history / volume | 스냅샷 실측값. closes는 최근 실종가 시계열(목표 250, 부족 시 실길이 ≥ 30 허용). 정합 규칙(closes[-1]==close·closes[-2]==prev_close·전 원소 양수·미래 시각 금지)은 §3.1과 동일 |
+| disclosures[] | 실공시 원문은 yfinance 미제공 — 시세·52주 고저·거래량 대비·섹터 등 **측정 사실 카드**로 대체 가능(각 source_id·as_of 필수). 실적 예정일은 공시된 예정일만 "예정일이 공시되어 있다" 서술로(§14 정합) |
+| source_id | 실데이터 출처 ID `YF-SRC-###`(§2 확장) — 정책 가드 SRC-FMT 패턴과 정합해야 하며, 패턴 확장 시 가드 테스트 동반 |
+| **금지** | 권유성 필드(recommendation\*·target\*·upgrades_downgrades·애널리스트 의견 등)는 **수집·저장·표시 전부 금지** — 어댑터·수집기의 화이트리스트가 강제(리서치: `docs/research/2026-07-18_yfinance_활용판단.md` §2(d)) |
+| holding / plan / cash / past_records | 교육용 모의 값 `[데모 고정]`(시연 서사용) — 평단 등은 스냅샷 시계열 내 실제 과거 종가에서 선택 |
+| trade_date | 스냅샷 기준 최근 거래일 |
+| 백업 | 가상 3종(§3.1)은 오프라인 백업 경로로 보존 — 네트워크·수집 실패 시 기본 폴백(§8 장애 안전) |
+
 ### 3.2 snapshot·manifest — `data/snapshots/`
 | 파일 | 필드 | 규칙 |
 |---|---|---|
 | `snapshot_YYYYMMDD.json` | 시장 통계(지수 등) | 실수집 성공분만. 가상 종목 가격의 원천이 아님(§1 혼용 금지) |
+| `market_context_YYYYMMDD_HHMM.json` | {as_of(KST), source("Yahoo Finance via yfinance"), delay_note, items: {kospi·kosdaq·kospi200·sp500·usdkrw·ust10y·vix 각 {value, prev, change_pct}}} | 실수집 성공 항목만 저장(부분 성공 허용). 파일 부재·항목 부재 시 해당 카드 미표시(안전 강등). VKOSPI는 원천 미제공 — ^VIX 사용 시 "미국 지표 참고" 병기 |
+| `stock_{티커숫자}_YYYYMMDD_HHMM.json` | 화이트리스트 필드만(§3.1-b 금지 목록 강제) + collected_at·delay_note | 실종목 fixture(§3.1-b)의 유일 원천. 원본 수정 금지(헌법 §7 — 파생은 어댑터 산출물로) |
 | `manifest.json` | {collected_at(KST), source(도구·URL), success(bool), sha256, items[]} | success=false거나 파일 부재 시 **화면에 어떤 as_of도 표시하지 않고 fixture 단독 모드** |
 
 ### 3.3 판단 기록 — `out/records/REC-*.json` (Git 제외)
@@ -159,6 +178,8 @@
 
 **차단의 단위**: 위반 블록만 제거하고 나머지는 렌더(전체 실패 아님). 차단 건수는 안전 지표 카운터·`out/audit/`에 기록.
 
+**동반자 대화(companion chat — D-0718-1120-main)**: `POST /api/companion/chat`의 응답도 본 §6 계약을 그대로 따른다(facts+source_id·as_of / interpretations 양면 / unknowns / next_questions, 렌더 전 guard 강제). 추가 필드 `reply_text`(말풍선용 평문 서술)를 허용하되 §7 사전 검사 대상이며, 숫자 포함 시 facts와 동일하게 허용 숫자 집합(스냅샷·엔진 산출)과 대조한다. 데이터 원천은 §3.1-b 실종목 fixture + §3.2 market_context 스냅샷의 **화이트리스트 필드만** 프롬프트에 격리 주입하고, 분할 비교·수수료 등 숫자는 엔진 계산 결과만 인용한다(LLM 산수 금지). 폴백 사슬: live → 사전 준비 문답 캐시(`data/fixtures/companion_cache/` — `[데모 고정]` 수기 검수 허용, 단 숫자는 엔진·스냅샷 산출값) → 안전 강등 문구("지금은 답변을 준비할 수 없어요 — 화면의 사실 카드를 참고해 주세요"). 실패를 숨기지 않는다.
+
 ## 7. 정책 가드 — 금지·허용 표현 사전 v1
 
 | 카테고리 | 금지 패턴(예시 — lexicon.py에 정규식화) | 허용 경계(오차단 방지) |
@@ -200,6 +221,7 @@
 - **비용·세금의 화면 표기(사용자 지시 2026-07-16)**: 세금 항목의 화면 표기는 **"세금"**으로 통일한다 — 거래세·농특세는 계약·코드·테스트의 내부 용어로 유지(구매/판매 ↔ 매수/매도와 같은 이원화). 정밀 명칭(증권거래세·농어촌특별세)은 ③ "주문 전 알아 둘 것"에서 1회만 병기한다. "비가역" 같은 한자어 라벨도 화면 카피에 쓰지 않는다 — 고지 문구는 "체결 후에는 취소할 수 없어요"로 충분하다.
 - **브리핑 원천 배지(S5)**: ② 브리핑 헤더에 생성 원천을 상시 표시한다 — 라이브="AI 생성(실시간)" / 캐시="준비된 응답(캐시)" / 정적 조립="기본 구성(정적)". 폴백 전환을 화면에서 숨기지 않는다(§8과 짝 — 정직 고지).
 - **브리핑 생성 시점(D-0718-0355)**: 브리핑은 시나리오 로드가 아니라 **"판단 전 브리핑 시작하기" 클릭 시점에 생성**한다(GET /api/briefing/{id} 분리) — 사용자가 ①(계획 회상)을 읽는 동안 백그라운드로 생성되어 ② 진입 시 준비되고, ② 도착 시 미완성이면 "브리핑을 준비하고 있어요" 로딩을 표시한다. "브리핑 없이 바로 주문"을 택한 사용자에게는 브리핑을 생성하지 않는다(live 모드의 불필요한 지연·비용 제거). 안전 지표 카운터의 브리핑 분(facts_rendered 등)도 이 시점에 집계된다.
+- **동반자 패널(전역 오버레이 — D-0718-1120-main)**: 전역 플로팅 버튼(FAB)으로 어느 화면에서든 호출하는 대화 패널(구현 기준: `docs/plans/2026-07-18_동반자챗봇_구현제안.md`·대화 설계 원본 `docs/mockup/2026-07-18_동반자챗봇_목업.html`). 패널 안에 주문 실행 버튼·`data-role="order-execute"` 마커·"체결하기" 문구 **금지** — 핸드오프는 ⑥ 모의 주문·투자 일지로의 내비게이션만. 패널 상단에 기준시각·출처·지연 고지 바 상시 표시. ⑥ 확인 시트·인터셉트 팝업이 열린 동안 FAB 숨김(오버레이 배타 규칙), 장애 안전모드 진입 시 FAB·패널 모두 숨김(대화도 판단 재료 공급원 — 함께 강등). 응답 카드에는 사실/해석(양면)/모름/계산 라벨과 가드 통과 라벨을 표기한다.
 - **접근성**: 모든 인터랙티브 요소에 텍스트 라벨, 핵심 화면 1개 이상 스크린리더 라벨 시연, 쉬운 한국어(문장당 1개념 목표).
 
 ## 10. 안전 지표 정의 (분모 명시 — "0건" 주장의 근거)

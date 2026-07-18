@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
-"""fixture·manifest 스키마 검증 (S1)
+"""fixture·manifest 스키마 검증 (S1 + §3.1-b 실종목 확장)
 
-단일 기준: docs/requirements-contract.md §3.1(fixture 스키마), §3.2(manifest),
-§5.2·5.2-b·5.2-c(골든값 전제). 이 스크립트의 상수가 계약과 다르면 계약이 우선한다.
+단일 기준: docs/requirements-contract.md §3.1(fixture 스키마), §3.1-b(실종목
+시나리오 델타), §3.2(manifest), §5.2·5.2-b·5.2-c(골든값 전제).
+이 스크립트의 상수가 계약과 다르면 계약이 우선한다.
 
 사용법:
     python scripts/data/validate_fixture.py
 동작:
     - data/fixtures/scenario_*.json 전부를 검사 (필수 필드·타입·값 일관성·양면 해석·골든 전제)
+    - is_synthetic=false(실종목 §3.1-b)는 data_origin 필수·YF-SRC 출처·
+      정합 계산(총자산=보유 평가+현금, 평단∈closes)·closes 실길이(30~250)를 검사
+    - 가상 3종(loss8·profit15·first_buy)의 기존 검사는 불변
     - data/snapshots/manifest.json 상태 보고 (없으면 "fixture 단독 모드" = 정상)
     - 하나라도 실패하면 종료 코드 1
 """
@@ -30,6 +34,7 @@ MANIFEST_PATH = ROOT / "data" / "snapshots" / "manifest.json"
 AS_OF_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2} KST$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SRC_RE = re.compile(r"^DEMO-SRC-\d{3}$")
+REAL_SRC_RE = re.compile(r"^YF-SRC-\d{3}$")  # 실데이터 출처(계약 §3.1-b, 가드 SRC-FMT 정합)
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 MARKETS = {"KOSPI", "KOSDAQ"}
@@ -42,6 +47,10 @@ TOP_KEYS = {
 }
 # community_buzz·past_records·discovery_context는 선택(계약 §3.1)
 REQUIRED_KEYS = TOP_KEYS - {"community_buzz", "past_records", "discovery_context"}
+# 실종목 fixture(§3.1-b)만 data_origin 필수 — 가상 fixture에 있으면 오류
+DATA_ORIGIN_KEYS = {"source", "collected_at", "delay_note", "snapshot_ref"}
+HISTORY_TARGET = 250  # 시계열 목표 길이(가상은 정확히 250, 실종목은 30~250 — §3.1-b)
+HISTORY_MIN_REAL = 30
 PAST_RECORD_KEYS = {"recorded_at", "side", "qty", "reason_text"}
 DISCOVERY_KEYS = {"path", "theme", "criteria", "entered_at"}
 PLAN_KEYS = {"horizon", "max_loss_pct", "review_condition", "recorded_at"}
@@ -79,10 +88,15 @@ def validate_fixture(path: Path) -> list[str]:
     except (OSError, json.JSONDecodeError) as exc:
         return [f"JSON 로드 실패: {exc}"]
 
+    # 실종목 fixture(§3.1-b) 여부 — is_synthetic=false면 델타 규칙 적용
+    is_real = data.get("is_synthetic") is False
+
     keys = set(data.keys())
-    for missing in sorted(REQUIRED_KEYS - keys):
+    allowed_keys = TOP_KEYS | ({"data_origin"} if is_real else set())
+    required_keys = REQUIRED_KEYS | ({"data_origin"} if is_real else set())
+    for missing in sorted(required_keys - keys):
         errors.append(f"필수 필드 누락: {missing}")
-    for unknown in sorted(keys - TOP_KEYS):
+    for unknown in sorted(keys - allowed_keys):
         errors.append(f"계약에 없는 필드: {unknown} (계약 §3.1이 단일 기준 — 계약을 먼저 갱신할 것)")
     if errors:
         return errors  # 구조가 깨졌으면 이후 검사는 무의미
@@ -91,7 +105,24 @@ def validate_fixture(path: Path) -> list[str]:
     if f"scenario_{sid}.json" != path.name:
         errors.append(f"scenario_id({sid})와 파일명({path.name}) 불일치")
 
-    if data["is_synthetic"] is not True:
+    if is_real:
+        # ── §3.1-b 델타: scenario_id 접두·data_origin 필수 필드 ──
+        if not sid.startswith("real_"):
+            errors.append(f"is_synthetic=false인데 scenario_id({sid})가 real_* 아님(계약 §3.1-b)")
+        origin = data["data_origin"]
+        if not isinstance(origin, dict) or set(origin.keys()) != DATA_ORIGIN_KEYS:
+            errors.append(f"data_origin 필드 불일치(필요: {sorted(DATA_ORIGIN_KEYS)})")
+        else:
+            for key in ("source", "delay_note", "snapshot_ref"):
+                if not (isinstance(origin[key], str) and origin[key].strip()):
+                    errors.append(f"data_origin.{key}는 비어 있지 않은 문자열")
+            if not (isinstance(origin["collected_at"], str)
+                    and AS_OF_RE.match(origin["collected_at"])):
+                errors.append("data_origin.collected_at 형식 오류('YYYY-MM-DD HH:mm KST')")
+            ref = origin.get("snapshot_ref")
+            if isinstance(ref, str) and ref and not (ROOT / "data" / "snapshots" / ref).is_file():
+                errors.append(f"data_origin.snapshot_ref 원천 스냅샷 없음: {ref} (§3.2 — 동결 원천 필수)")
+    elif data["is_synthetic"] is not True:
         errors.append("is_synthetic은 데모에서 항상 true여야 함 (화면 '교육용 가상 데이터' 배지 트리거)")
 
     if not (isinstance(data["as_of"], str) and AS_OF_RE.match(data["as_of"])):
@@ -128,8 +159,14 @@ def validate_fixture(path: Path) -> list[str]:
                 f"price.history.end_date {hist.get('end_date')!r} != trade_date {data.get('trade_date')!r}"
             )
         closes = hist.get("closes")
-        if not (isinstance(closes, list) and len(closes) == 250):
-            errors.append("price.history.closes는 길이 250의 배열(연속 거래일 종가)")
+        # 길이: 가상은 정확히 250, 실종목은 목표 250·실길이 ≥30 허용(§3.1-b)
+        if is_real:
+            len_ok = isinstance(closes, list) and HISTORY_MIN_REAL <= len(closes) <= HISTORY_TARGET
+        else:
+            len_ok = isinstance(closes, list) and len(closes) == HISTORY_TARGET
+        if not len_ok:
+            errors.append(
+                "price.history.closes 길이 오류(가상: 정확히 250, 실종목: 30~250 — §3.1-b)")
         elif not all(is_pos_int(v) for v in closes):
             errors.append("price.history.closes 원소는 전부 양의 정수(원)")
         else:
@@ -173,11 +210,12 @@ def validate_fixture(path: Path) -> list[str]:
     if not (isinstance(disc, list) and disc):
         errors.append("disclosures는 1건 이상 배열 (공시 없음 시나리오는 계약 §8 '확인된 공시 없음' 규칙으로 별도 설계)")
     else:
+        src_re, src_label = (REAL_SRC_RE, "YF-SRC-###") if is_real else (SRC_RE, "DEMO-SRC-###")
         for i, d in enumerate(disc):
             if not (isinstance(d, dict) and isinstance(d.get("text"), str) and d.get("text")):
                 errors.append(f"disclosures[{i}].text 오류")
-            if not (isinstance(d.get("source_id"), str) and SRC_RE.match(d["source_id"])):
-                errors.append(f"disclosures[{i}].source_id 오류: {d.get('source_id')!r} (규격 DEMO-SRC-###)")
+            if not (isinstance(d.get("source_id"), str) and src_re.match(d["source_id"])):
+                errors.append(f"disclosures[{i}].source_id 오류: {d.get('source_id')!r} (규격 {src_label})")
             if not (isinstance(d.get("published_at"), str) and AS_OF_RE.match(d["published_at"])):
                 errors.append(f"disclosures[{i}].published_at 형식 오류")
 
@@ -238,6 +276,27 @@ def validate_fixture(path: Path) -> list[str]:
                     errors.append(f"discovery_context.{key}는 비어 있지 않은 문자열")
             if not (isinstance(disc["entered_at"], str) and AS_OF_RE.match(disc["entered_at"])):
                 errors.append("discovery_context.entered_at 형식 오류('YYYY-MM-DD HH:mm KST')")
+
+    if is_real:
+        # ── §3.1-b 정합 계산(골든값 대신): 전부 스냅샷·모의 상수에서 파생 확인 ──
+        try:
+            qty, avg = hold.get("qty"), hold.get("avg_price")
+            expected_total = qty * price["close"] + data["cash"]
+            if data["portfolio_total_value"] != expected_total:
+                errors.append(
+                    f"portfolio_total_value {data['portfolio_total_value']} != "
+                    f"보유 평가+현금 {expected_total} (§3.1-b 정합 계산)")
+            closes = (price.get("history") or {}).get("closes")
+            if qty and isinstance(closes, list) and avg not in closes:
+                errors.append(
+                    f"holding.avg_price {avg}가 closes 안의 실제 과거 종가가 아님(§3.1-b)")
+            if isinstance(plan, dict) and data.get("past_records"):
+                rec0 = data["past_records"][0]
+                if isinstance(rec0, dict) and plan.get("recorded_at") != rec0.get("recorded_at"):
+                    errors.append("plan.recorded_at과 past_records[0].recorded_at 불일치(평단 시점 정합)")
+        except (TypeError, KeyError):
+            errors.append("실종목 정합 계산 불가 — 선행 필드 오류 확인")
+        return errors
 
     premise = GOLDEN_PREMISES.get(sid)
     if premise is None:
@@ -305,11 +364,16 @@ def main() -> int:
         else:
             print(f"PASS {path.name}")
 
+    # 가상 3종은 오프라인 백업 경로로 반드시 전부 존재(§3.1-b), 실종목은
+    # scenario_real_*만 추가 허용(그 외 이름은 계약에 없는 시나리오).
     expected = {f"scenario_{sid}.json" for sid in GOLDEN_PREMISES}
     actual = {p.name for p in fixtures}
-    if actual != expected:
+    missing = expected - actual
+    bad_extra = {n for n in actual - expected if not n.startswith("scenario_real_")}
+    if missing or bad_extra:
         all_ok = False
-        print(f"FAIL 시나리오 구성 불일치: 기대 {sorted(expected)} vs 실제 {sorted(actual)}")
+        print(f"FAIL 시나리오 구성 불일치: 가상 3종 누락 {sorted(missing)} · "
+              f"허용 밖 추가 {sorted(bad_extra)}")
 
     manifest_msg, manifest_ok = report_manifest()
     print(("PASS " if manifest_ok else "FAIL ") + manifest_msg)
