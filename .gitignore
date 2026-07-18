@@ -29,3 +29,8 @@ Thumbs.db
 
 # Claude Code 개인 로컬 설정(권한 허용 캐시) — 공유 설정 settings.json(로그 훅)은 추적 유지 (헌법 §10)
 .claude/settings.local.json
+
+# 실데이터 스냅샷(Yahoo 유래 시세) — PUBLIC 저장소 재배포 방지, 로컬 전용 (사용자 지시 2026-07-18)
+# manifest(수집 시각·해시 증빙 — 데이터 아님)와 .gitkeep은 추적 유지
+data/snapshots/*.json
+!data/snapshots/manifest.json
