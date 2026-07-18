@@ -72,3 +72,10 @@
 **확인된 원인** — `save_log.py` 슬림(`_claude_has_text`)은 `isSidechain`을 걸러내지 않으므로, sidechain=0은 **메인 트랜스크립트 자체에 서브에이전트 턴이 기록되지 않음**을 의미(서브에이전트 별도 처리). (불확실점: 이번 턴 서브에이전트가 Stop 훅 후 별도 UUID 로그로 생기는지 미확정 — 다음 세션 재측정 필요)
 **조치** — 감사 리포트(`out/submission/log_audit.md`)에 판정 기록. 영향 평가: **실격 위험 낮음** — ① 참가자↔메인 AI 본대화 전량 포함 ② 슬림은 주최 제공 공식 훅의 자동 동작(수동 편집 아님 — "편집·발췌=실격" 조항 비저촉) ③ 메인 응답이 서브에이전트 작업 목적·결과를 서술해 과정이 로그로 읽힘. `save_log.py`는 수정 금지(공식 훅)이므로 임의 개조로 억지 포함시키지 않음.
 **재발 방지** — 메인 응답에서 서브에이전트 작업의 목적·핵심 결과를 계속 명시(과정 legibility 유지). 다음 세션 시작 시 `logs/claude-code` 파일 수·sidechain 재측정으로 별도 로그 생성 여부 확정.
+
+### T-0718-0929-main · first_buy 시나리오 전환 크래시 — 지연 브리핑 분리(D-0718-0355) 이후 renderStep1의 브리핑 즉시 참조 잔존
+**발생 상황** — 차트 데이터화(D-0718-0931) 브라우저 검증 중 playwright로 loadScenario('first_buy') 호출.
+**증상** — `TypeError: Cannot read properties of undefined (reading 'next_questions')` at renderStep1(app.js:460) — first_buy 전환 시 renderAll 단계에서 크래시(loss8·profit15는 정상).
+**확인된 원인** — D-0718-0355가 브리핑을 /api/scenario 응답에서 분리(지연 생성)했는데, renderStep1의 plan==null 분기(first_buy 전용 — 질문 초안을 브리핑 next_questions에서 인용)가 `S.data.briefing`을 방어 없이 즉시 참조. 즉 D-0718-0355 이후 first_buy 로드·전환이 UI에서 계속 깨져 있었던 기존 결함(차트 변경과 무관). 당시 검증이 first_buy의 이 경로를 지나치지 않아 미발견.
+**조치(최종 해결)** — renderStep1 방어 접근(briefing 부재 시 질문 초안 자리에 "브리핑이 준비되면 질문 초안이 여기에 채워져요." 표시) + requestBriefing 성공 시 renderStep1 재호출(도착한 질문 초안 반영). playwright로 first_buy 전환·차트·질문 초안 자리 표시 재검증, 콘솔 오류 0, 305 tests·게이트 통과.
+**재발 방지** — 응답 스키마에서 필드를 분리(지연화)할 때는 해당 필드의 **모든 렌더 참조 지점을 grep으로 전수 확인**(이번 누락 원인 — renderStep2만 수정하고 renderStep1의 plan==null 분기를 놓침). 시나리오 전환 스모크는 3종 전부를 도는 것을 기본으로.

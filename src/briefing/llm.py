@@ -92,13 +92,29 @@ def resolve_mode(explicit: "str | None" = None) -> str:
     return mode if mode in VALID_MODES else "auto"
 
 
+def _strip_decorative(fx: dict) -> dict:
+    """판단 재료가 아닌 장식 필드를 제외한 얕은 사본을 돌려준다.
+
+    price.history(가상 시계열 — 계약 §3.1 [데모 고정])는 차트·기간 칩 렌더
+    전용이라 브리핑 프롬프트와 캐시 지문 어디에도 들어가면 안 된다:
+    프롬프트에 넣으면 자료 최소화 원칙 위반(250개 숫자 — 산수 금지와도 충돌),
+    지문에 넣으면 장식 데이터 변경만으로 판단 재료가 동일한 캐시가 스테일된다.
+    """
+    price = fx.get("price")
+    if isinstance(price, dict) and "history" in price:
+        fx = dict(fx)
+        fx["price"] = {k: v for k, v in price.items() if k != "history"}
+    return fx
+
+
 def fixture_fingerprint(fx: dict) -> str:
     """fixture 내용 지문 — 정규화 JSON(sort_keys) SHA-256.
 
     파일 바이트가 아니라 내용 기준이라 포맷(들여쓰기·키 순서)과 무관하고,
-    변형 fixture(테스트)는 반드시 다른 지문이 된다.
+    변형 fixture(테스트)는 반드시 다른 지문이 된다. 장식 필드(price.history)는
+    판단 재료가 아니므로 지문에서 제외한다(_strip_decorative).
     """
-    canonical = json.dumps(fx, ensure_ascii=False, sort_keys=True)
+    canonical = json.dumps(_strip_decorative(fx), ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -145,6 +161,7 @@ _PROMPT_FIELDS = (
 
 def build_messages(fx: dict, price_source_id: "str | None") -> list:
     """OpenAI chat 메시지 목록을 만든다(system 규칙 + user 자료 블록)."""
+    fx = _strip_decorative(fx)  # price.history 제외(자료 최소화 — 장식 시계열)
     data = {k: fx[k] for k in _PROMPT_FIELDS if k in fx}
     allowed_sources = [
         d.get("source_id") for d in (fx.get("disclosures") or [])

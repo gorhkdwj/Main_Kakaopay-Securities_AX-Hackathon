@@ -48,12 +48,13 @@ PLAN_KEYS = {"horizon", "max_loss_pct", "review_condition", "recorded_at"}
 
 # 계약 §5.2 / §5.2-b / §5.2-c 의 골든값 전제 — 여기서 어긋나면 골든값 표 전체가 무효
 GOLDEN_PREMISES = {
+    # cash: 전 시나리오 1,000,000 — 구 "매도 시나리오 0"의 개정(계약 §3.1, D-0718-0225)
     "loss8": dict(close=46000, prev_close=50000, change_pct=-8.0, qty=30,
-                  avg_price=50000, total=4_900_000, cash=0,
+                  avg_price=50000, total=4_900_000, cash=1_000_000,
                   trade_date="2026-07-17", plan_is_null=False,
                   past_records_count=1, has_discovery=False),
     "profit15": dict(close=46000, prev_close=44000, change_pct=4.5, qty=20,
-                     avg_price=40000, total=4_900_000, cash=0,
+                     avg_price=40000, total=4_900_000, cash=1_000_000,
                      trade_date="2026-07-17", plan_is_null=False,
                      past_records_count=1, has_discovery=False),
     "first_buy": dict(close=46000, prev_close=45500, change_pct=1.1, qty=0,
@@ -112,6 +113,28 @@ def validate_fixture(path: Path) -> list[str]:
             errors.append(f"change_pct 불일치: 기재 {price['change_pct']} vs 계산 {expected}")
     else:
         errors.append("price.change_pct 타입 오류(소수 1자리 수치)")
+
+    # price.history — 가상 가격 시계열(계약 §3.1 [데모 고정] — 차트·기간 칩 장식 원천)
+    hist = price.get("history")
+    if not isinstance(hist, dict):
+        errors.append("price.history 누락(계약 §3.1 — {unit, end_date, closes})")
+    else:
+        if hist.get("unit") != "trading_day":
+            errors.append(f"price.history.unit 오류: {hist.get('unit')!r} (고정: 'trading_day')")
+        if hist.get("end_date") != data.get("trade_date"):
+            errors.append(
+                f"price.history.end_date {hist.get('end_date')!r} != trade_date {data.get('trade_date')!r}"
+            )
+        closes = hist.get("closes")
+        if not (isinstance(closes, list) and len(closes) == 250):
+            errors.append("price.history.closes는 길이 250의 배열(연속 거래일 종가)")
+        elif not all(is_pos_int(v) for v in closes):
+            errors.append("price.history.closes 원소는 전부 양의 정수(원)")
+        else:
+            if closes[-1] != price.get("close"):
+                errors.append(f"history 마지막 {closes[-1]} != price.close {price.get('close')}")
+            if closes[-2] != price.get("prev_close"):
+                errors.append(f"history [-2] {closes[-2]} != price.prev_close {price.get('prev_close')}")
 
     vol = data["volume"]
     if not (is_pos_int(vol.get("today")) and is_pos_int(vol.get("avg20"))):

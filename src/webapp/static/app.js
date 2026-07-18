@@ -212,6 +212,7 @@ async function requestBriefing() {
     S.data.briefing = r.body.briefing;
     S.data.briefing_source = r.body.briefing_source;
     S.data.guard = r.body.guard;
+    renderStep1();  // 계획 없음(first_buy) 분기의 질문 초안이 브리핑에서 오므로 갱신
     if (S.step === 2) renderStep2();
   } else {
     showAppError(
@@ -301,21 +302,30 @@ function renderAll() {
 /* 주문 화면 재현 공용(S0 진입·⑧ 종착 — 계약 §9): 표시만.
    side 강조 없음 — 구매/판매 병렬·색 구분만(전 시나리오 공통, D-0717-2121).
    실앱 종목 상세 크롬 재현(캡처 27 — 리디자인 S3): 네비 행·탭·거래량 행·차트·기간 칩은
-   전부 비기능 장식(span·aria-hidden — 버튼 아님·배선 없음)이다. 수치는 가상 fixture 장식
-   [데모 고정]. 차트 방향은 이미 렌더 중인 change_pct 부호를 따른다(표시 전용). */
-function replicaChartSvg(changePct, close) {
-  const down = "0,26 28,20 52,38 78,30 106,52 134,46 162,66 190,58 214,78 242,72 270,88 300,82 330,94 360,98";
-  const flat = "0,60 30,56 60,63 90,58 120,64 150,59 180,62 210,57 240,63 270,59 300,62 330,58 360,61";
-  const pts = changePct < 0 ? down
-    : changePct > 0 ? down.split(" ").map(p => { const [x, y] = p.split(","); return `${x},${120 - y}`; }).join(" ")
-    : flat;
+   전부 비기능 장식(span·aria-hidden — 버튼 아님·배선 없음)이다.
+   차트·기간 칩은 fixture의 가상 시계열 price.history(계약 §3.1 [데모 고정])를 그대로
+   그린다 — 장식 렌더 전용, 판단 재료·금액 계산에 쓰지 않는다. */
+function replicaChartSvg(price) {
+  const changePct = price.change_pct;
   const color = changePct < 0 ? "var(--down)" : changePct > 0 ? "var(--up)" : "var(--flat)";
+  const hist = price.history && Array.isArray(price.history.closes) ? price.history.closes : null;
+  // 표시 창 = 최근 22거래일(≈1달) — 활성 기간 칩(1달)과 일치.
+  const win = hist && hist.length >= 2 ? hist.slice(-22) : [price.close, price.close];
+  const hi = Math.max(...win), lo = Math.min(...win);
+  const span = Math.max(hi - lo, 1);
+  const TOP = 10, BOT = 110, W = 360;
+  const pts = win.map((v, i) => {
+    const x = Math.round((i * W / (win.length - 1)) * 10) / 10;
+    const y = Math.round((BOT - ((v - lo) / span) * (BOT - TOP)) * 10) / 10;
+    return `${x},${y}`;
+  }).join(" ");
   // 현재가 지점 dot + halo(실앱 차트 종점 표시 — 스펙 §2.5). 면 채움 없음(QA 갭1 — 실앱은 라인만).
   const [lx, ly] = pts.trim().split(" ").pop().split(",");
-  // 우측 가격 눈금 [데모 고정] 장식 — 표시 가격 ±5%를 500원 단위로 반올림한 차트 스케일
-  // 마커일 뿐 판단 재료·금액 계산이 아니다(계산·생성 분리 원칙 무관 — 장식 눈금).
-  const t1 = Math.round((close * 1.05) / 500) * 500;
-  const t3 = Math.round((close * 0.95) / 500) * 500;
+  // 우측 가격 눈금 — 표시 창의 최고/중간/최저를 500원 단위 반올림한 차트 스케일 마커.
+  // 시계열 유래 표시일 뿐 판단 재료·금액 계산이 아니다(계산·생성 분리 원칙 무관 — 장식 눈금).
+  const t1 = Math.round(hi / 500) * 500;
+  const t2 = Math.round((hi + lo) / 2 / 500) * 500;
+  const t3 = Math.round(lo / 500) * 500;
   return `<div class="kp-chart" aria-hidden="true"><svg viewBox="0 0 360 120" preserveAspectRatio="none" style="overflow:visible">
     <line x1="0" y1="10" x2="360" y2="10" stroke="#f2f4f6" stroke-width="1"/>
     <line x1="0" y1="60" x2="360" y2="60" stroke="#f2f4f6" stroke-width="1"/>
@@ -323,17 +333,25 @@ function replicaChartSvg(changePct, close) {
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${lx}" cy="${ly}" r="10" fill="none" stroke="${color}" stroke-opacity=".3" stroke-width="1.5"/>
     <circle cx="${lx}" cy="${ly}" r="4" fill="${color}"/>
-  </svg><div class="kp-axis"><span>${num(t1)}</span><span>${num(close)}</span><span>${num(t3)}</span></div></div>`;
+  </svg><div class="kp-axis"><span>${num(t1)}</span><span>${num(t2)}</span><span>${num(t3)}</span></div></div>`;
 }
-/* 기간 칩 2줄(기간 + 기간 수익률 — 실앱 캡처27·QA 갭2). 수치는 당일 등락(실데이터)에
-   고정 배수를 곱한 [데모 고정] 장식(가상 종목 재현 화면 전용 — 판단 재료 아님). */
-function replicaRangeChips(changePct) {
-  const items = [["1일", 1], ["1주", 1.35], ["1달", 2.1], ["3달", 2.8], ["1년", -0.6]];
-  const chips = items.map(([k, mul], i) => {
-    const v = Math.round(changePct * mul * 10) / 10;
-    const cls = v > 0 ? "up" : v < 0 ? "dn" : "";
-    const ic = v > 0 ? "▲" : v < 0 ? "▼" : "—";
-    return `<span class="kp-range-chip${i === 1 ? " on" : ""}">${k}<span class="pct ${cls}">${ic} ${Math.abs(v).toFixed(1)}%</span></span>`;
+/* 기간 칩 2줄(기간 + 기간 수익률 — 실앱 캡처27·QA 갭2). 수치는 가상 시계열
+   price.history의 실제 구간 수익률(가상 종목 재현 화면 전용 — 판단 재료 아님).
+   시계열이 없거나 짧으면 해당 칩은 "—"로 표시(방어). */
+function replicaRangeChips(price) {
+  const hist = price.history && Array.isArray(price.history.closes) ? price.history.closes : null;
+  const last = hist ? hist[hist.length - 1] : null;
+  const items = [["1일", 1], ["1주", 5], ["1달", 21], ["3달", 63], ["1년", 249]];
+  const chips = items.map(([k, off], i) => {
+    let cls = "", label = "—";
+    if (hist && hist.length > off) {
+      const base = hist[hist.length - 1 - off];
+      const v = Math.round((last - base) / base * 1000) / 10;
+      cls = v > 0 ? "up" : v < 0 ? "dn" : "";
+      const ic = v > 0 ? "▲" : v < 0 ? "▼" : "—";
+      label = `${ic} ${Math.abs(v).toFixed(1)}%`;
+    }
+    return `<span class="kp-range-chip${i === 2 ? " on" : ""}">${k}<span class="pct ${cls}">${label}</span></span>`;
   }).join("");
   return `<div class="kp-range" aria-hidden="true">${chips}
     <span class="kp-range-ic"><svg viewBox="0 0 24 24"><polyline points="3,16 8,10 13,14 21,5" fill="none" stroke="var(--up)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -361,8 +379,8 @@ function renderOrderReplica(prefix) {
     <span class="kp-tab on">정보</span><span class="kp-tab">차트<i class="kp-dot"></i></span><span class="kp-tab">호가<i class="kp-dot"></i></span><span class="kp-tab">보유</span><span class="kp-tab">토론<i class="kp-dot"></i></span>
   </div>
   <div class="kp-stat-row" aria-hidden="true"><span>거래량 <b>1,842,113</b></span><span class="kp-stat-right">시가총액 <b>3.2조원</b></span><span class="kp-stat-fold">⌄</span></div>
-  ${replicaChartSvg(m.price.change_pct, m.price.close)}
-  ${replicaRangeChips(m.price.change_pct)}`;
+  ${replicaChartSvg(m.price)}
+  ${replicaRangeChips(m.price)}`;
   el(prefix + "-price").textContent = won(m.price.close);
   const st = S.settlement;
   el(prefix + "-qty").textContent = st ? num(st.qty) + "주" : "—";
@@ -440,14 +458,17 @@ function renderStep1() {
       <div class="checkline">재검토 조건: <b>${esc(plan.review_condition)}</b></div>
     </div>`;
   } else {
-    const qs = (S.data.briefing.next_questions || [])
+    // 브리핑은 지연 생성(D-0718-0355)이라 이 시점에 없을 수 있다 — 방어 접근.
+    // 도착하면 requestBriefing()이 renderStep1을 재호출해 질문 초안을 채운다.
+    const qs = ((S.data.briefing && S.data.briefing.next_questions) || [])
       .map((q) => `<div class="checkline">${esc(q)}</div>`).join("");
     el("s1-plan").innerHTML = `<div class="kcard notice">
       <div class="tag interp">아직 계획이 없어요</div>
       첫 구매 전이라 기록된 계획과 투자 일지가 0건이에요.
       아래 질문 초안 3가지에 답하면 그것이 첫 계획이 돼요.
     </div>
-    <div class="kcard"><div class="tag unk">질문 초안</div>${qs}</div>`;
+    <div class="kcard"><div class="tag unk">질문 초안</div>${
+      qs || '<div class="checkline">브리핑이 준비되면 질문 초안이 여기에 채워져요.</div>'}</div>`;
   }
 
   const records = S.data.past_records || [];

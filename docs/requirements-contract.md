@@ -35,7 +35,8 @@
 | as_of | str | ✓ | `YYYY-MM-DD HH:mm KST` — 가상 데이터임을 나타내는 `is_synthetic: true`와 함께만 유효 |
 | is_synthetic | bool | ✓ | 항상 true(데모) — 화면 배지 "교육용 가상 데이터" 트리거 |
 | instrument | obj | ✓ | {code(가상), name, market("KOSPI"·"KOSDAQ" 중 하나 — 상장시장, 세목 산정 근거)} — loss8: 가온전자 / profit15: 한빛식품 / first_buy: 다온소재 (전부 KOSPI 가정) |
-| price | obj | ✓ | {close(int, 원), prev_close(int), change_pct(float, 소수1)} — loss8: 46,000/50,000/-8.0 · profit15: 46,000/44,000/+4.5 · first_buy: 46,000/45,500/+1.1 |
+| price | obj | ✓ | {close(int, 원), prev_close(int), change_pct(float, 소수1), history(obj — 아래 행)} — loss8: 46,000/50,000/-8.0 · profit15: 46,000/44,000/+4.5 · first_buy: 46,000/45,500/+1.1 |
+| price.history | obj | ✓ | **`[데모 고정]` 가상 가격 시계열**(재현 화면 차트·기간 칩의 유일 원천 — 판단 재료·금액 계산에 사용 금지) {unit("trading_day" 고정), end_date(str — `trade_date`와 동일, 시계열의 마지막 거래일), closes(int[] 길이 250 — 연속 거래일 종가, 원)}. 정합 규칙: closes[-1]==close · closes[-2]==prev_close · 전 원소 양의 정수 · end_date가 마지막 원소의 시점이므로 모든 시점 ≤ as_of(미래 시각 금지 §14 정합). 서사 앵커: loss8=횡보(평단 50,000 부근) 후 말일 급락 · profit15=저점(평단 40,000)에서 우상향 · first_buy=박스권 횡보. 생성기 `scripts/data/gen_price_history.py`(고정 seed 결정론)로 1회 생성 후 동결. **브리핑 프롬프트·캐시 지문(fixture_fingerprint)에서 제외**(장식 데이터 — 자료 최소화·캐시 안정성, `src/briefing/llm.py _strip_decorative`) |
 | volume | obj | ✓ | {today(int), avg20(int), ratio(float)} — loss8: ratio 3.2 |
 | holding | obj | ✓ | {qty(int≥0 — first_buy는 0), avg_price(int·qty=0이면 null)} — loss8: 30/50,000 · profit15: 20/40,000 · first_buy: 0/null |
 | portfolio_total_value | int | ✓ | 스냅샷 시점 총 평가자산(원, **현금 포함** — first_buy가 전액 현금 1,000,000으로 선례) — loss8·profit15: 4,900,000(보유 종목 평가 + 기타 자산 + 현금 1,000,000으로 재구성 — D-0718-0225) · first_buy: 1,000,000. **비중 계산의 고정 분모(§4)** |
@@ -233,3 +234,4 @@
 | 결제일 | 주말만 제외 | 거래소 공휴일 캘린더 연동 |
 | 잔여 비중 분모 | 매도 전 스냅샷 고정 | 현금 재편입 반영 여부 UX 테스트 |
 | 소수점 거래 | 미지원 | 지원 시 체결 방식(지연 일괄) 고지 설계 필요(VOC 근거) |
+| 가격 시계열(차트·기간 칩) | 시나리오별 가상 250거래일 종가(`price.history`, 고정 seed 생성·동결 — §3.1) — 재현 화면 장식 렌더 전용 | 실서비스에서 실시세 시계열 API로 대체, 기간 수익률 산식·기준 재검토 |

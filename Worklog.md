@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0935-main · 재현 화면 차트 데이터 기반 전환 — 가상 시계열 생성·반영(D-0718-0931)
+**요청** — "차트가 시나리오와 안 맞는다 — 데이터 기반인가?" 진단 보고(하드코딩 장식 확인) 후 "데이터 기반으로 수정해줘. 급락·상승·첫 주문 각 시나리오 의도에 맞는 데이터를 생성해 반영해줘"(플랜 승인).
+**수행 작업** — 계약 §3.1(price.history 행)·§13(대장 등록) 선행 갱신 → 생성기 `scripts/data/gen_price_history.py`(고정 seed·서사 앵커: loss8 평단 50,000 횡보 후 말일 절벽 / profit15 36,000→매수일 40,000→우상향 / first_buy 박스권) 작성·실행 → fixture 3종에 250거래일 closes 동결 → app.js replicaChartSvg(22일 창·창 유래 눈금·dot/halo 유지)·replicaRangeChips(인덱스 오프셋 실계산·활성 칩 1달) 재작성 → llm.py `_strip_decorative`(지문·프롬프트에서 history 제외 — 캐시 3종 무편집 재검증) → validate_fixture(history 검사 + cash 골든 전제 stale 정정)·test_fixture_alignment(+3건). 부수 발견: first_buy 전환 크래시(D-0718-0355 잔존 결함) 수정(T-0718-0929).
+**변경 파일** — docs/requirements-contract.md(§3.1·§13), scripts/data/gen_price_history.py(신규), data/fixtures/scenario_{loss8,profit15,first_buy}.json, src/webapp/static/app.js, src/briefing/llm.py, scripts/data/validate_fixture.py, tests/engine/test_fixture_alignment.py, Decisionlog(D-0718-0931+INDEX 30), Troubleshootinglog(T-0718-0929)
+**검증** — pytest 305건 전체 통과(신규 3건 포함) · validate_fixture 전건 PASS · 게이트 통과(gate_20260718_0931 — 브리핑 3종 원천=cache 유지 확인) · playwright 3시나리오: loss8 평탄→절벽·칩 전부 ▼(1일 -8.0=change_pct 일치), profit15 우상향·칩 전부 ▲(3달 +15.1), first_buy 횡보·완만 칩, 눈금 창 최고/중간/최저 유래, 폴리라인 22점, 콘솔 오류 0. 정합 QA 통과: 직전(골든값·캐시 지문 불변 — 지문 제외로 해소, 발견·수정 1건), 직후(S0·⑧ 공용 renderOrderReplica 경유 확인), 전체(§14 미래 시각 금지 — 전 시점 ≤ as_of, 계산·생성 분리 — 시계열은 장식 렌더 전용).
+**판단 근거** — D-0718-0931(데이터 기반 전환·최소 침습 경로·지문 제외 규칙).
+**결과** — 완료. 3시나리오 차트·기간 칩이 의도된 서사와 정합. 검증 스크린샷 out/verify/(Git 제외).
+
 ### W-0718-0819-main · wt/redesign → main 병합·push
 **요청** — "github에 브랜치 merge해서 pull해줘".
 **수행 작업** — origin/wt/redesign(리디자인 S1~S9, 13커밋)을 main에 로컬 merge 후 origin/main push(`b9cb247`). Worklog.md 충돌 1건은 §13-3 규약대로 양쪽 블록 보존·타임스탬프순(0758→0752→0715) 정렬로 해소(내용 무편집).
