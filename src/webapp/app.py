@@ -56,7 +56,7 @@ from src.briefing.companion import (
     sanitize_companion_response,
     stock_asof_label,
 )
-from src.briefing.llm import append_audit, generate_briefing, resolve_mode
+from src.briefing.llm import append_audit, generate_briefing, load_cache, resolve_mode
 from src.engine import (
     CALC_ID_PATTERN,
     EngineInputError,
@@ -477,17 +477,48 @@ def create_app(fixtures_dir: "Path | str | None" = None,
             response, briefing_source = llm_response, llm_source
         else:
             response, briefing_source = static_response, "static"
+
+        # guard 관문(원천 무관 동일) — S5 확장: 숫자 대사·출처 실재 검사
+        def _guard(resp: dict):
+            return check_response(
+                resp, None,
+                allowed_numbers=collect_allowed_numbers(fx),
+                known_source_ids=known_source_ids_for(fx, scenario_id),
+            )
+
+        sanitized, record = _guard(response)
         append_audit({
             "scenario_id": scenario_id, "mode": app.state.briefing_mode,
             "source": briefing_source, "attempts": attempts,
+            "facts_total": len(response.get("facts") or []),
+            "facts_rendered": len(sanitized.get("facts") or []),
+            "guard_blocked": len(record.get("blocked") or []),
+            "guard_counters": record.get("counters"),
         }, app.state.audit_dir)
 
-        # guard 관문(원천 무관 동일) — S5 확장: 숫자 대사·출처 실재 검사
-        sanitized, record = check_response(
-            response, None,
-            allowed_numbers=collect_allowed_numbers(fx),
-            known_source_ids=known_source_ids_for(fx, scenario_id),
-        )
+        # 사실 0건 강등(계약 §8 — T-0718-1220): live·cache 응답이 guard 통과 후
+        # facts가 비면(모델이 비웠든 전건 차단이든) '사실 없는 브리핑'을 렌더하지
+        # 않고 다음 계층으로 강등한다. 실제 발생한 차단은 카운터에 정직 반영.
+        if not sanitized.get("facts") and briefing_source != "static":
+            accumulate_guard(sanitized, record)
+            degraded_from = briefing_source
+            fallback_response, briefing_source = static_response, "static"
+            if degraded_from == "live":
+                cached, _reason = load_cache(
+                    scenario_id, fx, cache_dir=app.state.llm_cache_dir)
+                if cached is not None:
+                    fallback_response, briefing_source = cached, "cache"
+            attempts = list(attempts) + [f"facts_empty_degraded({degraded_from})"]
+            sanitized, record = _guard(fallback_response)
+            append_audit({
+                "scenario_id": scenario_id, "mode": app.state.briefing_mode,
+                "source": briefing_source, "attempts": attempts,
+                "facts_total": len(fallback_response.get("facts") or []),
+                "facts_rendered": len(sanitized.get("facts") or []),
+                "guard_blocked": len(record.get("blocked") or []),
+                "guard_counters": record.get("counters"),
+            }, app.state.audit_dir)
+
         accumulate_guard(sanitized, record)
         return {
             "briefing": sanitized,

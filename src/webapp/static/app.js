@@ -563,6 +563,11 @@ function renderStep2() {
   if ((m.unavailable || []).includes("price")) {
     facts += `<div class="kcard state">시세 — 확인 불가(데이터 없음)</div>`;
   }
+  // 안전망(계약 §8 사실 0건 강등의 프런트 방어선 — 정상 경로에선 도달하지 않음):
+  // 사실 카드가 하나도 없으면 빈 섹션 대신 상태 카드로 알린다.
+  if (!facts) {
+    facts = `<div class="kcard state">이번 응답에서는 확인된 사실 카드를 준비하지 못했어요 — 새로고침으로 다시 시도해 주세요.</div>`;
+  }
   el("s2-facts").innerHTML = facts;
 
   const warn = (S.data.guard.record.warnings || [])
