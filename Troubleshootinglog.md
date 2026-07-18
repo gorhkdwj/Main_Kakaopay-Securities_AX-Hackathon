@@ -79,3 +79,10 @@
 **확인된 원인** — D-0718-0355가 브리핑을 /api/scenario 응답에서 분리(지연 생성)했는데, renderStep1의 plan==null 분기(first_buy 전용 — 질문 초안을 브리핑 next_questions에서 인용)가 `S.data.briefing`을 방어 없이 즉시 참조. 즉 D-0718-0355 이후 first_buy 로드·전환이 UI에서 계속 깨져 있었던 기존 결함(차트 변경과 무관). 당시 검증이 first_buy의 이 경로를 지나치지 않아 미발견.
 **조치(최종 해결)** — renderStep1 방어 접근(briefing 부재 시 질문 초안 자리에 "브리핑이 준비되면 질문 초안이 여기에 채워져요." 표시) + requestBriefing 성공 시 renderStep1 재호출(도착한 질문 초안 반영). playwright로 first_buy 전환·차트·질문 초안 자리 표시 재검증, 콘솔 오류 0, 305 tests·게이트 통과.
 **재발 방지** — 응답 스키마에서 필드를 분리(지연화)할 때는 해당 필드의 **모든 렌더 참조 지점을 grep으로 전수 확인**(이번 누락 원인 — renderStep2만 수정하고 renderStep1의 plan==null 분기를 놓침). 시나리오 전환 스모크는 3종 전부를 도는 것을 기본으로.
+
+### T-0718-1035-main · run_gate.py 요약 출력이 Windows cp949 콘솔에서 UnicodeEncodeError — 게이트 실행 절차 보완
+**발생 상황** — W1 브리프 검증 워크플로의 검증 에이전트가 안전 게이트를 실제 실행(2026-07-18 10:34).
+**증상** — JSON 결과 저장(`out/audit/gate_20260718_1034.json`, overall_pass=true)은 완료된 뒤, 콘솔 요약 출력의 em-dash(—) 문자에서 UnicodeEncodeError가 발생하며 종료 코드 1로 사망 — 결과는 통과인데 "게이트 실패"로 오인될 수 있는 상태.
+**확인된 원인** — Windows 기본 콘솔 코드페이지(cp949)가 스크립트 요약 출력의 유니코드 문자를 인코딩하지 못함. (불확실점: 기존 세션들의 gate_*.json은 정상 생성되어 있었음 — 콘솔 설정이 달랐던 것으로 추정, 미확인)
+**조치** — `PYTHONIOENCODING=utf-8` 환경변수를 붙여 실행하면 정상(에이전트 실측 확인). 런북 §7에 주의문·PowerShell 명령 병기. 스크립트 자체의 인코딩 방어 수정은 본선 후 검토 — 당일은 절차로 대응.
+**재발 방지** — 시연·제출 직전 게이트 실행은 런북 §7의 명령 형태(`$env:PYTHONIOENCODING='utf-8'`)로 고정. 게이트가 "실패"로 보일 때는 종료 코드보다 JSON의 overall_pass를 먼저 확인.
