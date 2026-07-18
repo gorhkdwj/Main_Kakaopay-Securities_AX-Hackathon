@@ -5,7 +5,8 @@
   "instrument": {
     "code": "DEMO-HANBIT",
     "name": "한빛식품",
-    "market": "KOSPI"
+    "market": "KOSPI",
+    "market_cap": 1800000000000
   },
   "price": {
     "close": 46000,

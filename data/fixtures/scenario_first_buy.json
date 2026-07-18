@@ -5,7 +5,8 @@
   "instrument": {
     "code": "DEMO-DAON",
     "name": "다온소재",
-    "market": "KOSPI"
+    "market": "KOSPI",
+    "market_cap": 980000000000
   },
   "price": {
     "close": 46000,

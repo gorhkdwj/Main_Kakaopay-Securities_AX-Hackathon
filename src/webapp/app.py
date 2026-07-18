@@ -543,9 +543,14 @@ def create_app(fixtures_dir: "Path | str | None" = None,
         )
         side = "buy" if (holding.get("qty") or 0) == 0 else "sell"
 
+        # 등락 금액(원) — 서버 파생 결정론 계산(계약 §3.1: 프런트 산수 금지·계산과 말의 분리)
+        price = dict(fx.get("price") or {})
+        if isinstance(price.get("close"), int) and isinstance(price.get("prev_close"), int):
+            price["change_amount"] = price["close"] - price["prev_close"]
+
         meta = {
             "instrument": fx.get("instrument"),
-            "price": fx.get("price"),
+            "price": price,
             "volume": fx.get("volume"),
             "holding": fx.get("holding"),
             "cash": fx.get("cash"),

@@ -70,6 +70,23 @@ function pctChange(p) {
   const word = p > 0 ? "상승" : p < 0 ? "하락" : "보합";
   return `<span class="pnl ${cls}">${icon} ${(p > 0 ? "+" : "")}${Number(p).toFixed(1)}% (${word})</span>`;
 }
+/* 등락 금액 병기(재현 화면 — 계약 §3.1 서버 파생 change_amount, 프런트 산수 없음) */
+function chgWon(price) {
+  const a = price.change_amount;
+  if (typeof a !== "number") return "";
+  const cls = a > 0 ? "up" : a < 0 ? "down" : "flat";
+  const sign = a > 0 ? "+" : a < 0 ? "-" : "";
+  return `<span class="pnl ${cls}">${sign}${num(Math.abs(a))}원</span>`;
+}
+/* 시가총액 표시 포맷(조/억 단위 — 계약 §5 재현 화면 표기: 표시 포맷팅만, 계산 아님) */
+function fmtMarketCap(v) {
+  if (typeof v !== "number" || v <= 0) return "—";
+  if (v >= 1e12) {
+    const jo = Math.round((v / 1e12) * 10) / 10;
+    return `${num(jo)}조원`;
+  }
+  return `${num(Math.round(v / 1e8))}억원`;
+}
 function el(id) { return document.getElementById(id); }
 
 /* ── API ──────────────────────────────────────────────── */
@@ -306,34 +323,44 @@ function renderAll() {
    차트·기간 칩은 fixture의 가상 시계열 price.history(계약 §3.1 [데모 고정])를 그대로
    그린다 — 장식 렌더 전용, 판단 재료·금액 계산에 쓰지 않는다. */
 function replicaChartSvg(price) {
-  const changePct = price.change_pct;
-  const color = changePct < 0 ? "var(--down)" : changePct > 0 ? "var(--up)" : "var(--flat)";
   const hist = price.history && Array.isArray(price.history.closes) ? price.history.closes : null;
   // 표시 창 = 최근 22거래일(≈1달) — 활성 기간 칩(1달)과 일치.
   const win = hist && hist.length >= 2 ? hist.slice(-22) : [price.close, price.close];
   const hi = Math.max(...win), lo = Math.min(...win);
   const span = Math.max(hi - lo, 1);
-  const TOP = 10, BOT = 110, W = 360;
+  const TOP = 10, BOT = 110, W = 360, H = 120;
   const pts = win.map((v, i) => {
     const x = Math.round((i * W / (win.length - 1)) * 10) / 10;
     const y = Math.round((BOT - ((v - lo) / span) * (BOT - TOP)) * 10) / 10;
     return `${x},${y}`;
   }).join(" ");
-  // 현재가 지점 dot + halo(실앱 차트 종점 표시 — 스펙 §2.5). 면 채움 없음(QA 갭1 — 실앱은 라인만).
-  const [lx, ly] = pts.trim().split(" ").pop().split(",");
+  // 종점 dot·halo와 최고/최저 주석은 SVG 밖 overlay(% 좌표) — viewBox 비율
+  // 왜곡(preserveAspectRatio:none) 없이 스펙 §2.5의 정원(dot 8px·halo 34px)을 유지.
+  const xPct = (i) => (i / (win.length - 1)) * 100;
+  const yPct = (v) => ((BOT - ((v - lo) / span) * (BOT - TOP)) / H) * 100;
+  const clampX = (p) => Math.min(84, Math.max(16, p));
+  const hiIdx = win.indexOf(hi), loIdx = win.indexOf(lo);
+  // 최고/최저 주석(실앱 chart-note — 스펙 §2.5): 표시 창 시계열의 실제 극값을
+  // 그대로 표기(최댓값·최솟값 선택일 뿐 계산 아님 — 계약 §5 재현 화면 표기).
+  const notes = hi === lo ? "" : `
+    <span class="kp-note" style="left:${clampX(xPct(hiIdx))}%;top:${yPct(hi)}%;transform:translate(-50%,-135%)">최고 ${num(hi)}원 ↑</span>
+    <span class="kp-note" style="left:${clampX(xPct(loIdx))}%;top:${yPct(lo)}%;transform:translate(-50%,40%)">최저 ${num(lo)}원 ↓</span>`;
   // 우측 가격 눈금 — 표시 창의 최고/중간/최저를 500원 단위 반올림한 차트 스케일 마커.
   // 시계열 유래 표시일 뿐 판단 재료·금액 계산이 아니다(계산·생성 분리 원칙 무관 — 장식 눈금).
   const t1 = Math.round(hi / 500) * 500;
   const t2 = Math.round((hi + lo) / 2 / 500) * 500;
   const t3 = Math.round(lo / 500) * 500;
-  return `<div class="kp-chart" aria-hidden="true"><svg viewBox="0 0 360 120" preserveAspectRatio="none" style="overflow:visible">
+  // 선·dot·halo는 등락 무관 단일 파랑(실앱 재현 — 계약 §5, 사용자 승인 2026-07-18).
+  // 방향 정보는 등락 텍스트·기간 칩의 4중 표기가 담당한다.
+  return `<div class="kp-chart" aria-hidden="true"><div class="kp-plot"><svg viewBox="0 0 360 120" preserveAspectRatio="none">
     <line x1="0" y1="10" x2="360" y2="10" stroke="#f2f4f6" stroke-width="1"/>
     <line x1="0" y1="60" x2="360" y2="60" stroke="#f2f4f6" stroke-width="1"/>
     <line x1="0" y1="110" x2="360" y2="110" stroke="#f2f4f6" stroke-width="1"/>
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${lx}" cy="${ly}" r="10" fill="none" stroke="${color}" stroke-opacity=".3" stroke-width="1.5"/>
-    <circle cx="${lx}" cy="${ly}" r="4" fill="${color}"/>
-  </svg><div class="kp-axis"><span>${num(t1)}</span><span>${num(t2)}</span><span>${num(t3)}</span></div></div>`;
+    <polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>
+    <span class="kp-chart-halo" style="left:${xPct(win.length - 1)}%;top:${yPct(win[win.length - 1])}%"></span>
+    <span class="kp-chart-dot" style="left:${xPct(win.length - 1)}%;top:${yPct(win[win.length - 1])}%"></span>${notes}
+  </div><div class="kp-axis"><span>${num(t1)}</span><span>${num(t2)}</span><span>${num(t3)}</span></div></div>`;
 }
 /* 기간 칩 2줄(기간 + 기간 수익률 — 실앱 캡처27·QA 갭2). 수치는 가상 시계열
    price.history의 실제 구간 수익률(가상 종목 재현 화면 전용 — 판단 재료 아님).
@@ -373,12 +400,12 @@ function renderOrderReplica(prefix) {
   <div class="price-head kp">
     <div class="kp-nm-row"><span class="nm">${esc(name)} <span class="meta-inline">(가상)</span></span><span class="kp-caret" aria-hidden="true"></span></div>
     <div><span class="pr">${num(m.price.close)}원</span></div>
-    <div class="kp-chg-row">${pctChange(m.price.change_pct)} <span class="mk">${esc(m.market_label)}</span><span class="kp-help" aria-hidden="true">?</span></div>
+    <div class="kp-chg-row">${chgWon(m.price)} ${pctChange(m.price.change_pct)} <span class="mk">${esc(m.market_label)}</span><span class="kp-help" aria-hidden="true">?</span></div>
   </div>
   <div class="kp-tabs" aria-hidden="true">
     <span class="kp-tab on">정보</span><span class="kp-tab">차트<i class="kp-dot"></i></span><span class="kp-tab">호가<i class="kp-dot"></i></span><span class="kp-tab">보유</span><span class="kp-tab">토론<i class="kp-dot"></i></span>
   </div>
-  <div class="kp-stat-row" aria-hidden="true"><span>거래량 <b>1,842,113</b></span><span class="kp-stat-right">시가총액 <b>3.2조원</b></span><span class="kp-stat-fold">⌄</span></div>
+  <div class="kp-stat-row" aria-hidden="true"><span>거래량 <b>${num(m.volume.today)}</b></span><span class="kp-stat-right">시가총액 <b>${fmtMarketCap(m.instrument ? m.instrument.market_cap : null)}</b></span><span class="kp-stat-fold">⌄</span></div>
   ${replicaChartSvg(m.price)}
   ${replicaRangeChips(m.price)}`;
   el(prefix + "-price").textContent = won(m.price.close);

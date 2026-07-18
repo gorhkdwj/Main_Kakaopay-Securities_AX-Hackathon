@@ -103,6 +103,8 @@ def validate_fixture(path: Path) -> list[str]:
         errors.append("instrument.code/name 오류")
     if inst.get("market") not in MARKETS:
         errors.append(f"instrument.market 오류: {inst.get('market')!r} (허용: {sorted(MARKETS)} — 세목 산정 근거)")
+    if not is_pos_int(inst.get("market_cap")):
+        errors.append("instrument.market_cap는 양의 정수(원 — 계약 §3.1 [데모 고정] 장식 표기)")
 
     price = data["price"]
     if not (is_pos_int(price.get("close")) and is_pos_int(price.get("prev_close"))):

@@ -95,16 +95,25 @@ def resolve_mode(explicit: "str | None" = None) -> str:
 def _strip_decorative(fx: dict) -> dict:
     """판단 재료가 아닌 장식 필드를 제외한 얕은 사본을 돌려준다.
 
-    price.history(가상 시계열 — 계약 §3.1 [데모 고정])는 차트·기간 칩 렌더
-    전용이라 브리핑 프롬프트와 캐시 지문 어디에도 들어가면 안 된다:
-    프롬프트에 넣으면 자료 최소화 원칙 위반(250개 숫자 — 산수 금지와도 충돌),
-    지문에 넣으면 장식 데이터 변경만으로 판단 재료가 동일한 캐시가 스테일된다.
+    장식 필드(계약 §3.1 [데모 고정] — 재현 화면 렌더 전용)는 브리핑 프롬프트와
+    캐시 지문 어디에도 들어가면 안 된다: 프롬프트에 넣으면 자료 최소화 원칙
+    위반(price.history는 250개 숫자 — 산수 금지와도 충돌, market_cap은 출처
+    없는 사실 인용 위험), 지문에 넣으면 장식 데이터 변경만으로 판단 재료가
+    동일한 캐시가 스테일된다.
+    - price.history: 가상 시계열(차트·기간 칩)
+    - instrument.market_cap: 시가총액 장식 표기
     """
+    out = fx
     price = fx.get("price")
     if isinstance(price, dict) and "history" in price:
-        fx = dict(fx)
-        fx["price"] = {k: v for k, v in price.items() if k != "history"}
-    return fx
+        out = dict(out)
+        out["price"] = {k: v for k, v in price.items() if k != "history"}
+    inst = fx.get("instrument")
+    if isinstance(inst, dict) and "market_cap" in inst:
+        if out is fx:
+            out = dict(out)
+        out["instrument"] = {k: v for k, v in inst.items() if k != "market_cap"}
+    return out
 
 
 def fixture_fingerprint(fx: dict) -> str:

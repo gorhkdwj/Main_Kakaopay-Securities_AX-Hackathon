@@ -5,7 +5,8 @@
   "instrument": {
     "code": "DEMO-GAON",
     "name": "가온전자",
-    "market": "KOSPI"
+    "market": "KOSPI",
+    "market_cap": 3200000000000
   },
   "price": {
     "close": 46000,

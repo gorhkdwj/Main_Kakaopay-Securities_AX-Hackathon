@@ -25,6 +25,7 @@
   --up: #f04452;              /* 상승·구매·이익 = 빨강 */
   --up-strong: #f04452;       /* 구매 버튼(단일 토큰 통일 — 스펙 §1.1) */
   --down: #3182f6;            /* 하락·판매·손실·링크 = 파랑 */
+  --blue: #3182f6;            /* 차트 선 단일 파랑(스펙 §2.5 — 등락 무관, 계약 §5) */
   --up-bg: #ffecef;  --down-bg: #e8f3ff;
   --flat: #6b7684;
   --dark: #191f28;            /* 주요 진행 CTA(짙은 pill) */
@@ -446,7 +447,7 @@ textarea { resize: vertical; }
   position: absolute; margin: 3px 0 0 1px; width: 5px; height: 5px;
   border-radius: 50%; background: var(--alert-dot);
 }
-.kp-stat-row { display: flex; align-items: center; gap: 16px; font-size: 16px; color: var(--ink-2); padding: 12px 0 8px; }
+.kp-stat-row { display: flex; align-items: center; gap: 16px; font-size: 17px; color: var(--ink-2); padding: 12px 0 8px; }
 .kp-stat-row b { color: var(--ink); font-weight: 700; }
 .kp-stat-right { margin-left: auto; }
 .kp-stat-fold {
@@ -459,22 +460,37 @@ textarea { resize: vertical; }
   font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
 }
 /* 차트 — 실앱급 대형(QA 갭1: 높이·우측 가격 눈금·면 채움 제거) */
-.kp-chart { position: relative; margin: 4px 0 6px; padding-right: 56px; }
+.kp-chart { position: relative; margin: 4px 0 6px; padding-right: 72px; }
 .kp-chart svg { width: 100%; height: 226px; display: block; }
+/* 종점 dot·halo·최고/최저 주석은 % 좌표 overlay — SVG 늘림(preserveAspectRatio:none)
+   왜곡 없이 스펙 §2.5의 정원(dot r4=8px·halo r17=34px)·글자 크기를 유지 */
+.kp-plot { position: relative; }
+.kp-chart-dot {
+  position: absolute; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--blue); transform: translate(-50%, -50%);
+}
+.kp-chart-halo {
+  position: absolute; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid rgba(49, 130, 246, .35); transform: translate(-50%, -50%);
+}
+.kp-note {
+  position: absolute; font-size: 14px; font-weight: 500; color: var(--ink-2);
+  white-space: nowrap; line-height: 1;
+}
 .kp-axis {
-  position: absolute; right: 0; top: 0; bottom: 0; width: 52px;
+  position: absolute; right: 0; top: 0; bottom: 0; width: 72px;
   border-left: 1px solid var(--line);
   display: flex; flex-direction: column; justify-content: space-between;
-  font-size: 12.5px; color: var(--axis); padding: 2px 0 2px 8px;
+  font-size: 15px; color: var(--axis); padding: 2px 0 2px 8px;
   font-variant-numeric: tabular-nums;
 }
 /* 기간 칩 2줄(기간 + 기간 수익률 — QA 갭2) + 우측 아이콘 */
-.kp-range { display: flex; gap: 4px; align-items: center; padding: 6px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.kp-range { display: flex; gap: 8px; align-items: center; padding: 8px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .kp-range-chip {
-  flex: 1; text-align: center; font-size: 15px; font-weight: 500;
-  color: var(--sub); padding: 6px 0 7px; border-radius: 12px; line-height: 1.25;
+  flex: 1; text-align: center; font-size: 16px; font-weight: 500;
+  color: var(--sub); padding: 7px 0; border-radius: 9px; line-height: 1.25;
 }
-.kp-range-chip .pct { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+.kp-range-chip .pct { display: block; font-size: 13px; font-weight: 700; margin-top: 2px; }
 .kp-range-chip .pct.dn { color: var(--down); }
 .kp-range-chip .pct.up { color: var(--up); }
 .kp-range-chip.on { background: var(--chip-gray); color: var(--ink); font-weight: 700; }

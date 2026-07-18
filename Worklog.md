@@ -15,6 +15,14 @@
 
 ---
 
+### W-0718-0958-main · 재현 화면 표기 확장 a1~a4 — 변동액·거래량/시가총액 데이터화·차트 단일 파랑·최고/최저 주석·스펙 튜닝(D-0718-0956)
+**요청** — 남은 작업 정리 후 지시: a1 변동액 병기·a2 거래량/시가총액 데이터화·a4 스펙 미세 튜닝 진행, a3는 설명 후 승인(둘 다 진행·단일 파랑 선택), 나머지(C1~C4·D1)는 task 등록 후 차후 판단.
+**수행 작업** — 계약 선행 갱신(§3.1 market_cap·change_amount 파생 규칙, §5 재현 화면 표기 불릿, §13 시가총액 행) → fixture 3종 instrument.market_cap(3.2조/1.8조/9,800억) → app.py meta.price 사본에 change_amount 결정론 계산 → app.js: chgWon(등락 금액 병기)·fmtMarketCap(조/억 포맷)·거래량 volume.today 연결·replicaChartSvg 재구성(단일 파랑 선 stroke 2.5, 종점 dot/halo·최고/최저 주석을 % 좌표 overlay로 — viewBox 왜곡 없이 스펙 정원 8px/34px, 주석 x 클램프 16~84%) → app.css: --blue 토큰·kp-plot/kp-chart-dot/kp-chart-halo/kp-note + a4 튜닝(축 72px·15px, 칩 16/13px·radius 9, 통계행 17px) → llm.py _strip_decorative에 market_cap 추가(캐시 지문 보존) → validate_fixture market_cap 검사 → 신규 tests/webapp/test_replica_meta.py 7건. 클래스 충돌 예방(kp-dot 탭 알림 점과 분리 명명).
+**변경 파일** — docs/requirements-contract.md(§3.1·§5·§13), data/fixtures/scenario_*.json(3종), src/webapp/app.py, src/webapp/static/{app.js,app.css}, src/briefing/llm.py, scripts/data/validate_fixture.py, tests/webapp/test_replica_meta.py(신규), Decisionlog(D-0718-0956+INDEX 31)
+**검증** — pytest 312건 전체 통과(신규 7건 포함) · validate_fixture 전건 PASS · 게이트 통과(gate_20260718_0953 — 캐시 3종 원천 유지, market_cap 지문 제외 유효) · playwright 3시나리오: loss8 "-4,000원·576,000·3.2조원·최고 50,350/최저 46,000 주석·파란 선·정원 dot/halo", profit15 "+2,000원·432,000·1.8조원·최저 주석 클램프 보정 확인", first_buy "+500원·198,000·9,800억원" · 콘솔 오류 0. 정합 QA 통과: 직전(캐시 지문 — market_cap 제외로 보존·기존 305 불변), 직후(S0·⑧ 공용 렌더러 단일 경로), 전체(계산·생성 분리 — 등락 금액 서버 파생·§14 4중 표기는 등락 텍스트 유지).
+**판단 근거** — D-0718-0956(서버 파생·데이터화·단일 파랑 사용자 선택·장식 지문 제외 일관 적용).
+**결과** — a1~a4 완료(task #1~#4). 검증 스크린샷 out/verify/. 잔여 task: C1~C4·D1(차후 판단).
+
 ### W-0718-0935-main · 재현 화면 차트 데이터 기반 전환 — 가상 시계열 생성·반영(D-0718-0931)
 **요청** — "차트가 시나리오와 안 맞는다 — 데이터 기반인가?" 진단 보고(하드코딩 장식 확인) 후 "데이터 기반으로 수정해줘. 급락·상승·첫 주문 각 시나리오 의도에 맞는 데이터를 생성해 반영해줘"(플랜 승인).
 **수행 작업** — 계약 §3.1(price.history 행)·§13(대장 등록) 선행 갱신 → 생성기 `scripts/data/gen_price_history.py`(고정 seed·서사 앵커: loss8 평단 50,000 횡보 후 말일 절벽 / profit15 36,000→매수일 40,000→우상향 / first_buy 박스권) 작성·실행 → fixture 3종에 250거래일 closes 동결 → app.js replicaChartSvg(22일 창·창 유래 눈금·dot/halo 유지)·replicaRangeChips(인덱스 오프셋 실계산·활성 칩 1달) 재작성 → llm.py `_strip_decorative`(지문·프롬프트에서 history 제외 — 캐시 3종 무편집 재검증) → validate_fixture(history 검사 + cash 골든 전제 stale 정정)·test_fixture_alignment(+3건). 부수 발견: first_buy 전환 크래시(D-0718-0355 잔존 결함) 수정(T-0718-0929).
