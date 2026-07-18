@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동반자 챗봇 목업 — 판단 여권 (실데이터 질의응답 계획안)</title>
+<!--
+  본선 문제(주식 매수/매도 지원 시스템 — How to trade) 대응 목업.
+  yfinance 실측 데이터(2026-07-16 종가, 005930.KS·^KS11·KRW=X — 07-18 10시 실수집 확인)를
+  그대로 사용해 "구현 계획이 성공했을 때"의 대화 모습을 정적으로 그린다.
+  원칙: 매수/매도 직접 권유 0 · 모든 사실에 출처/기준시각 · 숫자는 결정론 엔진(계산 ID) ·
+  양면 해석 병기 · 모름은 모름으로 · 되묻는 티키타카(심사 QnA 키워드: 동반자).
+-->
+<style>
+  :root {
+    --up: #f04452; --down: #3182f6; --blue: #3182f6; --flat: #6b7684;
+    --ink: #191f28; --ink-2: #6b7684; --sub: #8b95a1;
+    --bg: #eef1f4; --card: #ffffff; --line: #eff0f2; --chip: #f2f4f6;
+    --up-bg: #ffecef; --down-bg: #e8f3ff; --warn-bg: #fff8e6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .stage { display: flex; gap: 28px; justify-content: center; align-items: flex-start; padding: 28px 16px 60px; flex-wrap: wrap; }
+
+  /* ── 폰 프레임 ─────────────────────────────── */
+  .phone {
+    width: 430px; max-width: 100%; background: #fff; border-radius: 28px;
+    box-shadow: 0 18px 50px rgba(25,31,40,.16); overflow: hidden;
+    border: 1px solid #e3e6ea;
+  }
+  .topbar {
+    display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--line); background: #fff; position: sticky; top: 0;
+  }
+  .topbar .back { font-size: 20px; color: var(--ink); }
+  .topbar .who { flex: 1; }
+  .topbar .who .nm { font-size: 16.5px; font-weight: 700; }
+  .topbar .who .st { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .pill.safe { background: var(--chip); color: var(--ink-2); }
+  .mockbar { background: var(--ink); color: #fff; text-align: center; font-size: 12px; font-weight: 700; padding: 7px 0; letter-spacing: .2px; }
+  .asofbar {
+    background: var(--down-bg); color: #1b64da; font-size: 11.5px; font-weight: 600;
+    text-align: center; padding: 6px 10px;
+  }
+
+  .chat { padding: 14px 14px 8px; background: #f7f8fa; display: flex; flex-direction: column; gap: 14px; }
+
+  /* 말풍선 */
+  .u { align-self: flex-end; max-width: 78%; background: var(--ink); color: #fff;
+       padding: 11px 14px; border-radius: 18px 18px 4px 18px; font-size: 14.5px; line-height: 1.5; }
+  .a { align-self: flex-start; max-width: 92%; display: flex; flex-direction: column; gap: 8px; }
+  .a .who-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); }
+  .a .who-row .dot { width: 18px; height: 18px; border-radius: 50%; background: #ffd338; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+  .bubble { background: #fff; border: 1px solid var(--line); border-radius: 4px 18px 18px 18px;
+            padding: 12px 14px; font-size: 14.5px; line-height: 1.62; }
+  .bubble + .bubble { border-radius: 18px; }
+
+  /* 도구 호출 트레이스(파이프라인 가시화) */
+  .tools { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tool { font-size: 11px; font-weight: 600; color: var(--ink-2); background: var(--chip);
+          border-radius: 999px; padding: 4px 9px; }
+  .tool b { color: var(--ink); }
+
+  /* 카드 요소 */
+  .tag { display: inline-block; font-size: 11px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; margin-bottom: 6px; }
+  .tag.fact { background: var(--down-bg); color: #1b64da; }
+  .tag.pos { background: var(--up-bg); color: #d6323f; }
+  .tag.neg { background: var(--down-bg); color: #1b64da; }
+  .tag.unk { background: var(--chip); color: var(--ink-2); }
+  .tag.calc { background: #efe9ff; color: #6b3fd4; }
+  .tag.hand { background: #e7f7ef; color: #0f9d58; }
+  .src { display: inline-block; font-size: 10.5px; color: var(--sub); background: var(--chip);
+         border-radius: 5px; padding: 1.5px 6px; margin-left: 5px; vertical-align: 1px; white-space: nowrap; }
+  .kline { padding: 3px 0; }
+  .kline b.up { color: var(--up); } .kline b.dn { color: var(--down); }
+  .divider { border: none; border-top: 1px dashed #e3e6ea; margin: 8px 0; }
+
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 2px; }
+  table.cmp th { font-weight: 600; color: var(--ink-2); background: var(--chip); padding: 7px 6px; text-align: center; }
+  table.cmp td { padding: 7px 6px; text-align: center; border-bottom: 1px solid var(--line); }
+  table.cmp td:first-child { text-align: left; color: var(--ink-2); font-size: 12.5px; }
+  table.cmp b { font-variant-numeric: tabular-nums; }
+
+  .note { font-size: 12px; color: var(--sub); line-height: 1.5; margin-top: 6px; }
+  .ask { background: #fffdf3; border: 1px solid #f4e9c8; border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+
+  /* 빠른 답장 칩 */
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .quick span { font-size: 13px; font-weight: 600; color: #1b64da; background: #fff;
+                border: 1px solid #cfe1fb; border-radius: 999px; padding: 7px 12px; }
+
+  /* 가드 라벨 */
+  .guard { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: #0f9d58; font-weight: 600; }
+  .guard::before { content: "✓"; font-size: 11px; }
+
+  /* 핸드오프 버튼 */
+  .btns { display: flex; gap: 8px; margin-top: 8px; }
+  .btns span { flex: 1; text-align: center; font-size: 13.5px; font-weight: 700; padding: 11px 0; border-radius: 12px; }
+  .btns .primary { background: var(--ink); color: #fff; }
+  .btns .ghost { background: var(--chip); color: var(--ink); }
+
+  /* 입력줄 */
+  .inputbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px 16px; background: #f7f8fa; }
+  .inputbar .field { flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 999px;
+                     padding: 11px 16px; font-size: 14px; color: var(--sub); }
+  .inputbar .send { width: 38px; height: 38px; border-radius: 50%; background: var(--ink); color: #fff;
+                    display: flex; align-items: center; justify-content: center; font-size: 15px; }
+
+  /* 안전 푸터 */
+  .safety { border-top: 1px solid var(--line); background: #fff; padding: 9px 14px;
+            display: flex; justify-content: space-between; font-size: 10.5px; color: var(--sub); }
+  .safety b { color: var(--ink-2); }
+
+  /* ── 우측 설계 노트 ─────────────────────────── */
+  .notes { width: 360px; max-width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .ncard { background: #fff; border-radius: 16px; padding: 16px 18px; border: 1px solid #e3e6ea; }
+  .ncard h3 { font-size: 14px; margin-bottom: 8px; }
+  .ncard p, .ncard li { font-size: 12.5px; color: var(--ink-2); line-height: 1.65; }
+  .ncard ul { padding-left: 16px; }
+  .ncard .hl { color: var(--ink); font-weight: 700; }
+  .flow { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+  .flow span { background: var(--chip); border-radius: 8px; padding: 7px 10px; color: var(--ink); font-weight: 600; }
+  .flow i { text-align: center; color: var(--sub); font-style: normal; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ═════════ 폰: 동반자 대화 ═════════ -->
+  <div class="phone">
+    <div class="mockbar">목업 — 모의 대화 · 실제 거래 아님 · 매수/매도 권유 없음</div>
+    <div class="topbar">
+      <span class="back">←</span>
+      <div class="who">
+        <div class="nm">동반자 <span class="pill safe">판단 여권 AI</span></div>
+        <div class="st">삼성전자 005930 · 마지막 실행 단계를 함께 정리해요</div>
+      </div>
+    </div>
+    <div class="asofbar">데이터 기준시각 2026-07-16 15:30 KST 종가 · Yahoo Finance 수집 스냅샷 (07-18 10:05 동결)</div>
+
+    <div class="chat">
+
+      <!-- 인트로 -->
+      <div class="a">
+        <div class="who-row"><span class="dot">◆</span> 동반자</div>
+        <div class="bubble">
+          안녕하세요! <b>삼성전자를 1,000만 원어치 매수하기로 결정</b>하셨다고요.
+          종목을 고르신 건 여기서 끝 — 이제 남은 건 <b>"어떻게 살까"</b>죠.
+          제가 사라·팔라를 대신 정해드릴 수는 없지만, 결정에 필요한 사실과 계산을
+          같이 정리해드릴 수 있어요.
+        </div>
+        <div class="quick"><span>지금 사도 괜찮을까?</span><span>나눠 살까, 한 번에 살까?</span><span>오늘 시장 어땠어?</span></div>
+      </div>
+
+      <!-- Q1 -->
+      <div class="u">지금 사도 괜찮을까요? 오늘 많이 떨어진 것 같아서 무서워요…</div>
+
+      <div class="a">
+        <div class="who-row"><span class="dot">◆</span> 동반자</div>
+        <div class="tools">
+          <span class="tool">📦 스냅샷 조회 <b>005930.KS</b> 일봉·시세</span>
+          <span class="tool">📦 <b>^KS11</b> 코스피</span>
+          <span class="tool">🧮 엔진 <b>가격위치·시장대비</b></span>
+        </div>
+        <div class="bubble">
+          <span class="tag fact">사실</span><span class="src">Yahoo Finance · 07-16 15:30 KST</span>
+          <div class="kline">종가 <b>255,000원</b> — 전일 대비 <b class="dn">▼ -24,500원 (-8.8%)</b></div>
+          <div class="kline">같은 날 코스피 <b class="dn">▼ -6.4%</b> · 코스닥 <b class="dn">▼ -4.5%</b> — <b>시장 전체가 함께 크게 내린 날</b>이에요</div>
+          <div class="kline">거래량 2,700만 주 — 3개월 평균(3,058만 주)의 <b>0.9배, 평소 수준</b></div>
+          <div class="kline">가격 위치: 52주 최고(374,500원) 대비 <b>-31.9%</b> · 52주 최저(64,900원) 대비 위쪽</div>
+          <hr class="divider">
+          <span class="tag pos">긍정 시각</span>
+          <div class="kline">지수가 -6.4% 내린 날의 -8.8%는 상당 부분 <b>시장 요인과 겹친 하락</b>일 수 있어요. 거래량이 평소 수준인 점도 "이 종목만의 투매"와는 결이 달라요.</div>
+          <span class="tag neg">부정 시각</span>
+          <div class="kline">시장보다 <b>2.4%p 더 내렸고</b>, 급락 다음 날은 변동이 이어지는 경우도 많아요. 하락이 더 이어질 가능성은 누구도 배제할 수 없어요.</div>
+          <span class="tag unk">모름</span>
+          <div class="kline">내일 가격 방향은 <b>알 수 없어요</b>. 저는 예측하지 않아요.</div>
+        </div>
+        <div class="bubble ask">
+          💬 결정을 정교하게 만들어볼게요 — <b>이 종목을 고른 이유</b>와
+          <b>얼마나 오래 가져갈 계획</b>인지 여쭤봐도 될까요? 그 기준에 오늘 하락이
+          영향을 주는지 같이 볼 수 있어요.
+        </div>
+        <div class="guard">가드 통과 — 출처 없는 사실 0 · 권유·단정 표현 0 · 기준시각 표기 4/4</div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="u">왜 이렇게 떨어진 거예요?</div>
+
+      <div class="a">
+        <div class="who-row"><span class="dot">◆</span> 동반자</div>
+        <div class="tools">
+          <span class="tool">📦 뉴스 헤드라인 <b>10건</b></span>
+          <span class="tool">📦 환율 <b>KRW=X</b></span>
+        </div>
+        <div class="bubble">
+          "왜"를 한 가지로 확정해 말씀드릴 수는 없어요. 대신 <b>그날 함께 있었던 사실</b>을 보여드릴게요.
+          <hr class="divider">
+          <span class="tag fact">사실 — 같은 날의 시장</span>
+          <div class="kline">코스피·코스닥 동반 급락(-6.4%·-4.5%) · 원/달러 환율 <b>1,487원</b><span class="src">Yahoo Finance · 07-16~17</span></div>
+          <span class="tag fact">사실 — 최근 헤드라인</span>
+          <div class="kline">"AI발 메모리 수급 경색, 스마트폰 시장 흔들다" <span class="src">TechCrunch · 07-17 20:09 UTC</span></div>
+          <div class="kline">"장기 투자자가 주목할 반도체 사이클 논쟁" <span class="src">Barron's · 07-17 20:30 UTC</span></div>
+          <hr class="divider">
+          <span class="tag unk">모름</span>
+          <div class="kline">이 사실들이 하락을 얼마나 설명하는지는 <b>확정할 수 없어요</b>. 뉴스는 참고 자료일 뿐, 하락과의 인과는 아무도 증명하지 못해요.</div>
+        </div>
+        <div class="guard">가드 통과 — 헤드라인은 원문 출처·시각 병기(영문 원문 번역 요약)</div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="u">한 번에 다 살까요, 나눠서 살까요?</div>
+
+      <div class="a">
+        <div class="who-row"><span class="dot">◆</span> 동반자</div>
+        <div class="tools">
+          <span class="tool">🧮 엔진 <b>분할 매수 비교</b> CAL-20260718-B01</span>
+        </div>
+        <div class="bubble">
+          <span class="tag calc">계산 — 결정론 엔진</span><span class="src">CAL-20260718-B01 · 07-16 종가 기준</span>
+          <table class="cmp">
+            <tr><th></th><th>한 번에</th><th>3회 분할</th></tr>
+            <tr><td>수량</td><td><b>39주</b></td><td><b>13주 × 3회</b></td></tr>
+            <tr><td>1회 금액</td><td><b>9,945,000원</b></td><td><b>3,315,000원</b></td></tr>
+            <tr><td>수수료(0.015%)</td><td><b>1,491원</b></td><td>합계 <b>약 1,491원</b> (정률 — 나눠도 같아요)</td></tr>
+            <tr><td>매수가 확정</td><td>오늘 1번</td><td>3번에 걸쳐 평균</td></tr>
+          </table>
+          <div class="note">잔여 예수금(한 번에): 53,509원 · 결제는 각 체결일 +2영업일</div>
+          <hr class="divider">
+          <span class="tag fact">참고 사실 — 최근 3거래일로 보면</span>
+          <div class="kline">7/14·15·16 종가로 3회 나눴다면 평균 <b>265,833원</b>, 오늘 하루 일괄이면 <b>255,000원</b> — 이번 주는 <b>내리는 주여서</b> 결과적으로 일괄이 쌌어요.<span class="src">계산: 엔진 · 데이터: Yahoo Finance</span></div>
+          <div class="note">⚠️ 과거 사실일 뿐이에요. 오르는 주였다면 반대였겠죠 — 미래에도 그렇다는 뜻이 아니에요.</div>
+          <hr class="divider">
+          <span class="tag pos">분할의 성격</span>
+          <div class="kline">"언제"의 부담을 여러 번으로 나눠 <b>평균을 사는</b> 선택 — 타이밍이 두려울 때 마음의 비용이 줄어요.</div>
+          <span class="tag neg">일괄의 성격</span>
+          <div class="kline">가격이 <b>지금 숫자로 확정</b>되는 선택 — 단순하고, 이후 흔들림은 온전히 감수해요.</div>
+          <span class="tag unk">모름</span>
+          <div class="kline">어느 쪽이 더 좋은 결과가 될지는 <b>지나봐야 알아요</b>. 정답이 아니라 성격이 다른 선택지예요.</div>
+        </div>
+        <div class="bubble ask">💬 분할 간격(며칠)과 횟수를 바꿔서 다시 계산해볼까요?</div>
+        <div class="quick"><span>2회로 비교</span><span>5회로 비교</span><span>1주 간격으로</span></div>
+        <div class="guard">가드 통과 — 숫자 전부 계산 ID 대조 일치 · LLM 산수 0건</div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="u">그럼 오늘은 13주만 먼저 해볼게요.</div>
+
+      <div class="a">
+        <div class="who-row"><span class="dot">◆</span> 동반자</div>
+        <div class="bubble">
+          <span class="tag hand">사용자 결정 — 기록해둘게요</span>
+          <div class="kline">"1,000만 원 중 <b>13주(3,315,000원)</b>를 먼저, 나머지는 나중에" — 제 의견이 아니라 <b>직접 내리신 결정</b>이에요.</div>
+          <hr class="divider">
+          <span class="tag fact">주문 전 확인 4가지</span>
+          <div class="kline">① 수수료 <b>497원</b>(0.015%) — 매수는 세금 없음 ② 총 결제예정액 <b>3,315,497원</b> ③ 결제(출금)는 <b>+2영업일</b> ④ 체결 후에는 <b>취소할 수 없어요</b></div>
+          <div class="btns"><span class="primary">모의 주문으로 연습하기</span><span class="ghost">일지에 이유 남기기</span></div>
+          <div class="note">실제 주문 실행은 이 대화 밖(증권사 주문 화면)에서 — 저는 실행 버튼을 갖지 않아요.</div>
+        </div>
+        <div class="bubble ask">💬 다음 확인 시점도 잡아둘까요? 회사가 공시한 다음 실적 발표일은 <b>7/29</b>예요.<span class="src">Yahoo Finance calendar</span></div>
+      </div>
+
+    </div>
+
+    <div class="inputbar">
+      <div class="field">궁금한 걸 물어보세요 — 결정은 당신의 몫이에요</div>
+      <div class="send">↑</div>
+    </div>
+    <div class="safety">
+      <span>안전 지표 — 출처 없는 사실 <b>0</b> · 권유·단정 차단 <b>0</b> · 기준시각 누락 <b>0</b></span>
+      <span>교육용 데모</span>
+    </div>
+  </div>
+
+  <!-- ═════════ 설계 노트 ═════════ -->
+  <div class="notes">
+    <div class="ncard">
+      <h3>🧭 이 목업이 보여주는 것</h3>
+      <p>본선 문제 <span class="hl">"How to trade — 마지막 실행 단계 지원"</span>을,
+      심사 QnA 키워드 <span class="hl">"동반자·티키타카·권유 금지"</span> 그대로 구현했을 때의 대화.
+      모든 수치는 2026-07-18 10시에 <span class="hl">yfinance로 실수집해 확인한 실데이터</span>다
+      (005930.KS·^KS11·^KQ11·KRW=X — 07-16 종가 기준).</p>
+    </div>
+    <div class="ncard">
+      <h3>🔩 데이터 파이프라인</h3>
+      <div class="flow">
+        <span>① yfinance 수집 → JSON 스냅샷 동결 (기준시각·해시 manifest)</span><i>↓</i>
+        <span>② 결정론 계산 엔진 — 수수료·분할 비교·가격 위치·시장 대비 (계산 ID 발급)</span><i>↓</i>
+        <span>③ LLM — 사실 인용·쉬운 설명·양면 해석·되묻기 (산수 금지)</span><i>↓</i>
+        <span>④ 가드 — 출처 없는 사실·권유/단정·기준시각 누락 차단</span><i>↓</i>
+        <span>⑤ 화면 — 사실/해석/모름 분리 렌더</span>
+      </div>
+      <p style="margin-top:8px">스냅샷 동결이라 <span class="hl">현장 Wi-Fi가 끊겨도 동일하게 동작</span>
+      (심사 기준: 실시간성 아닌 데이터 다루는 방식).</p>
+    </div>
+    <div class="ncard">
+      <h3>💬 대화 설계 원칙 (버블별 대응)
+      </h3>
+      <ul>
+        <li><span class="hl">Q1 "지금 사도 돼?"</span> — 방향 대답 대신 시장 대비 위치·가격 위치 <b>사실</b> + 양면 + <b>계획 되묻기</b>(티키타카의 시작).</li>
+        <li><span class="hl">Q2 "왜 떨어져?"</span> — 인과 단정 금지. "같은 날 있었던 사실"로 재프레임, 뉴스는 출처·시각 병기.</li>
+        <li><span class="hl">Q3 "나눠 살까?"</span> — 문제문의 핵심. 결정론 엔진의 분할 비교 + 실데이터 백테스트를 <b>과거 사실</b>로만 제시, "정답이 아니라 성격이 다른 선택지" 프레임.</li>
+        <li><span class="hl">Q4 결정 선언</span> — 결정의 소유권을 사용자에게 명시적으로 돌려주고, 비용·D+2·비가역 4종 고지 후 <b>모의 주문/일지로 핸드오프</b>. 실행 버튼은 대화에 없음.</li>
+      </ul>
+    </div>
+    <div class="ncard">
+      <h3>🚫 의도적으로 안 하는 것</h3>
+      <ul>
+        <li>애널리스트 목표가·매수/매도 의견(yfinance <span class="hl">recommendations</span>) — 방향 의견이라 권유 금지 원칙과 충돌, <b>설계적으로 배제</b>.</li>
+        <li>수익 예측·"괜찮아질 거예요"류 위로 단정.</li>
+        <li>대화 내 주문 실행 버튼.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
