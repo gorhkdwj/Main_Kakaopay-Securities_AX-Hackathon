@@ -10,6 +10,13 @@
 
 ---
 
+### T-0721-1051-main · 최신 main 전체 테스트에서 Git 제외 실데이터 부재로 14건 실패
+**발생 상황** — 로컬 `main`을 `origin/main(e14342f)`으로 fast-forward하고 병합 완료 브랜치를 정리한 뒤 표준 전체 테스트(`.venv\\Scripts\\python.exe -m pytest -q`) 실행.
+**증상** — 361건 중 347건 통과·14건 실패. 직접 원인은 `data/fixtures/scenario_real_005930.json`, `data/snapshots/market_context_*.json`, `data/snapshots/stock_005930_*.json`, `data/fixtures/companion_cache/real_005930.json` 부재 4종이며, 이로 인해 companion API의 `real_005930` 요청이 404로 강등되어 연쇄 assertion 실패가 발생. 안전 게이트는 가상 fixture 3종 기준으로 전항목 통과(`gate_20260721_1051`).
+**확인된 원인** — 위 실데이터 파일은 Yahoo 유래 시세 재배포 방지를 위해 `.gitignore`에 의도적으로 제외되어 있고 저장소에는 생성 스크립트만 추적된다(W-0718-1110·W-0718-1114). 현재 worktree 어디에도 2026-07-18 동결 산출물이 없어 clean checkout만으로 실데이터 의존 테스트를 재현할 수 없음. 브랜치 삭제나 checkout이 기존 ignored 파일을 제거한 정황은 없으며, 정리 전부터 해당 로컬 파일이 존재하지 않았음.
+**조치(현재 상태)** — 실패 원인과 파일 4종의 ignore 규칙을 확인하고 기대값 삭제·skip 추가·테스트 완화는 하지 않음. 현재 시점 데이터 재수집도 계약의 2026-07-18 동결 기준과 원본 불변 원칙을 바꾸므로 중단. 브랜치 정리는 포함 관계 검증 후 정상 완료했으며 코드 유실 없음.
+**재발 방지** — 공식 작업 환경/새 clone 준비 절차에 제출 당시 Git 제외 산출물 4종의 안전한 로컬 복구와 지문 확인을 선행 조건으로 명시하고, 복구 후 pytest 361건을 재실행한다. 장기적으로는 라이선스를 침해하지 않는 결정론 테스트용 대체 fixture 또는 명시적 preflight 실패로 clean-clone 테스트 계약을 분리하되, 계약·계획·Decisionlog 선행 갱신 후 구현한다.
+
 ### T-0716-0932-main · 비밀정보 스캔이 git rename 경로를 오파싱해 3개 파일 누락
 **발생 상황** — D-0716-0923 커밋 전 push 스캔(임시 PowerShell 명령) 실행 중.
 **증상** — `git status --porcelain`의 rename 표기(`R old -> new`)를 단일 경로로 해석해 Test-Path가 "Illegal characters in path" 오류를 내고 이동된 계획 문서 3개가 스캔에서 제외됨.

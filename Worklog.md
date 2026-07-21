@@ -11,10 +11,17 @@
 ## 파일 소유권 매트릭스 (병렬 작업 시 갱신 — CLAUDE.md 13-5)
 | 세션(브랜치) | 담당 경로 | 상태 |
 |---|---|---|
-| main(브리프·W4 세션) | scripts/data/ · data/snapshots/ · data/fixtures/scenario_real_* · docs/submission/ · docs/research/ · 로그 3종(append) · 계약 §3.1-b·§3.2 | 활성 (2026-07-18 11:15 선언) |
-| main(챗봇 목업·구현 병렬 세션 — W-0718-1045) | docs/mockup/ · (src/webapp 챗 구현 추정 — 범위 미선언) | 활성 추정 — src/ 공유 파일 수정 전 git status 상호 확인 |
+| main | 전체 (현재 단일 worktree·단일 브랜치) | 활성 (2026-07-21 브랜치 정리 후 갱신) |
 
 ---
+
+### W-0721-1050-main · GitHub·로컬 브랜치 최신화 및 병합 완료 보조 브랜치 정리
+**요청** — GitHub 각 브랜치와 로컬 최신 상태 점검 후 제시한 권장 조치(`main` fast-forward, 병합 완료 보조 브랜치 정리)를 그대로 실행.
+**수행 작업** — GitHub 실시간 브랜치와 로컬 refs를 교차 대조하고 `git fetch --prune origin` 수행. 깨끗한 `wt/redesign`에서 `main`으로 전환해 `0f13ac8`→`e14342f` 31커밋 fast-forward. 삭제 직전 `wt/redesign`과 `origin/wt/briefing-facts-fallback`이 모두 `origin/main`의 ancestor이며 고유 커밋 0임을 재확인한 뒤 로컬 `wt/redesign`(`cf22f19`)과 원격 `wt/briefing-facts-fallback`(`14df9bb`)을 삭제하고 다시 prune. 파일 소유권 매트릭스를 현재 단일 worktree·단일 브랜치 상태로 갱신.
+**변경 파일** — Worklog.md(본 항목·소유권 매트릭스), Troubleshootinglog.md(T-0721-1051-main). Git 메타데이터: 로컬/원격 보조 브랜치 삭제·`main` 체크아웃 최신화.
+**검증** — 삭제 전 포함 관계 2건 통과·원격 SHA 실조회 일치·삭제 후 로컬/원격 브랜치 `main` 단일화 확인. 안전 게이트 `gate_20260721_1051` 통과(B 27/27 차단·P 0/21 오차단·브리핑 3종 차단 0·위험 고지 4/4). 전체 pytest는 361건 중 347건 통과·14건 실패: PUBLIC 저장소 재배포 방지로 Git 제외된 `scenario_real_005930.json`·market/stock 스냅샷·companion cache가 이 로컬에 없어 발생한 환경 의존 실패(T-0721-1051-main); 기대값 삭제·완화 및 현재 시점 데이터 재수집은 하지 않음.
+**판단 근거** — 두 보조 브랜치는 `main`에 완전히 병합되어 삭제해도 코드 유실이 없고, 로컬 `main`은 고유 커밋 없이 fast-forward 가능. 실데이터 재수집은 계약의 2026-07-18 동결 기준과 원본 불변 원칙을 깨므로 정확한 당시 로컬 산출물 복구 전에는 보류.
+**결과** — 브랜치 최신화·정리 완료. 남은 작업: 2026-07-18 제출/백업본에서 Git 제외 실데이터 4종을 복구한 뒤 pytest 361건 재실행. branch protection/Ruleset은 요구 리뷰 수·직접 push 허용 등 정책 선택이 필요한 별도 조치로 미적용.
 
 ### W-0718-1444-main · 시연 런북 두 버전 병합 — 실데이터(real_005930) 라이브 기본판 단일화
 **요청** — "런북 두 버전이 있는데 라이브 삼성전자 실데이터 사용 시연 런북으로 병합해줄래?" (/brainstorming — 병합 방식 질의 후 "원본에 전면 병합 + 델타 삭제" 선택)
